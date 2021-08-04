@@ -2,7 +2,7 @@ var mongoose = require("mongoose");
 
 var TransactionSchema = new mongoose.Schema(
 	{
-		trans_id: { type: String, required: true },
+		charge_id: { type: String, required: true },
 		email: { type: String, required: true },
 		amount: { type: Number, required: true },
 	},

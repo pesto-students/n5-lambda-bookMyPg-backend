@@ -11,11 +11,11 @@ mongoose.set("useFindAndModify", false);
  *
  * @returns {Object}
  */
-exports.stripeStore = [
+exports.paymentStore = [
 	(req, res) => {
 		try {
 			var transaction = new Transaction({
-				trans_id: req.body.id,
+				charge_id: req.body.id,
 				email: req.body.email || req.body.card.name,
 				amount: req.body.amount,
 			});
