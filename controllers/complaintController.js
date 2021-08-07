@@ -1,4 +1,5 @@
 const Complaint = require('../models/complaintModel');
+const Property = require('../models/propertyModel');
 const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
@@ -13,6 +14,46 @@ function ComplaintData(data) {
   this.raisedby = data.raisedby;
   this.property = data.property;
   this.isactive = data.isactive;
+}
+
+async function filterQuery(data) {
+  try {
+    var filterString = {};
+    let res = '';
+    if (data.fromdate && data.todate) {
+      filterString['createdAt'] = [
+        { $gte: new Date(data.fromdate) },
+        { $lte: new Date(data.todate) },
+      ];
+    } else if (data.fromdate) {
+      filterString['createdAt'] = {
+        $gte: new Date(data.fromdate),
+      };
+    } else if (data.todate) {
+      filterString['createdAt'] = {
+        $lte: new Date(data.todate),
+      };
+    }
+
+    if (data.search) {
+      res = await Property.find(
+        {
+          name: {
+            $regex: '.*' + data.search + '.*',
+            $options: 'i',
+          },
+        },
+        { _id: 1 },
+      );
+
+      if (res) {
+        filterString['property'] = { $in: res };
+      }
+    }
+    return filterString;
+  } catch (err) {
+    console.log('Error in query');
+  }
 }
 
 /**
@@ -70,14 +111,14 @@ exports.complaintList = [
         }
 
         // Execute query and return response
-        query.exec(function (err, properties) {
+        query.exec(function (err, complaints) {
           if (err) console.log(err);
-          if (properties) {
-            if (properties.length > 0) {
+          if (complaints) {
+            if (complaints.length > 0) {
               return apiResponse.successResponseWithData(
                 res,
                 'Operation success',
-                properties,
+                complaints,
               );
             } else {
               return apiResponse.successResponseWithData(
