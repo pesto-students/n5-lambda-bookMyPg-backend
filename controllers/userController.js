@@ -115,7 +115,7 @@ exports.userStore = [
 		.isEmail()
 		.withMessage("Email must be a valid email address.")
 		.custom(value => {
-			return User.findOne({ email: value, isactive: true }).then(user => {
+			return User.findOne({ email: value }).then(user => {
 				if (user) {
 					return Promise.reject("E-mail already in use");
 				}
@@ -124,6 +124,7 @@ exports.userStore = [
 	sanitizeBody("firstName").escape(),
 	sanitizeBody("lastName").escape(),
 	sanitizeBody("email").escape(),
+	sanitizeBody("phone").escape(),
 	// Process request after validation and sanitization.
 	(req, res) => {
 		try {

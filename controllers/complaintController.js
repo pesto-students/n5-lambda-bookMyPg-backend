@@ -10,8 +10,6 @@ function ComplaintData(data) {
 	this.id = data._id;
 	this.status = data.status;
 	this.description = data.description;
-	this.email = data.email;
-	this.phone = data.phone;
 	this.raisedby = data.raisedby;
 	this.property = data.property;
 	this.isactive = data.isactive;
@@ -27,7 +25,7 @@ exports.complaintList = [
 		try {
 			Complaint.find()
 				.populate("property", ["name"])
-				.populate("raisedby", ["firstName", "lastName"])
+				.populate("raisedby", ["firstName", "lastName", "email", "phone"])
 				.then(complaints => {
 					if (complaints.length > 0) {
 						return apiResponse.successResponseWithData(
@@ -65,7 +63,7 @@ exports.complaintDetail = [
 		try {
 			Complaint.findOne({ _id: req.params.id })
 				.populate("property", ["name"])
-				.populate("raisedby", ["firstName", "lastName"])
+				.populate("raisedby", ["firstName", "lastName", "email", "phone"])
 				.then(complaint => {
 					if (complaint !== null) {
 						let complaintData = new ComplaintData(complaint);
@@ -102,14 +100,7 @@ exports.complaintStore = [
 		.isLength({ min: 1 })
 		.trim()
 		.withMessage("Description must be specified."),
-	body("email")
-		.isLength({ min: 1 })
-		.trim()
-		.withMessage("Email must be specified.")
-		.isEmail()
-		.withMessage("Email must be a valid email address."),
 	sanitizeBody("description").escape(),
-	sanitizeBody("email").escape(),
 	// Process request after validation and sanitization.
 	(req, res) => {
 		try {
@@ -125,8 +116,6 @@ exports.complaintStore = [
 			} else {
 				// Create Complaint object with escaped and trimmed data
 				var complaint = new Complaint({
-					email: req.body.email,
-					phone: req.body.phone,
 					description: req.body.description,
 					raisedby: req.body.raisedby,
 					property: req.body.property,
@@ -139,8 +128,6 @@ exports.complaintStore = [
 					}
 					let complaintData = {
 						_id: complaint._id,
-						email: complaint.email,
-						phone: complaint.phone,
 						description: complaint.description,
 						raisedby: complaint.raisedby,
 						property: complaint.property,
