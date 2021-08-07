@@ -22,8 +22,11 @@ async function filterQuery(data) {
     let res = '';
 
     if (data.type) {
-      type === 'tenant' ? (filterString['property'] = { $exists: true }) : '';
+      if (data.type === 'tenant') {
+        filterString['property'] = { $exists: true };
+      }
     }
+    console.log(data.type);
     if (data.fromdate && data.todate) {
       filterString['onboardedAt'] = [
         { $gte: new Date(data.fromdate) },
