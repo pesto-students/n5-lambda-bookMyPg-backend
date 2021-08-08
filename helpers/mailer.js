@@ -9,9 +9,7 @@ var transporter = nodemailer.createTransport({
   },
 });
 
-var source = fs
-  .readFileSync('../email-templates/template.html', 'utf-8')
-  .toString();
+/*var source = fs.readFileSync('./template.html', 'utf-8').toString();
 var template = handlebars.compile(source);
 
 exports.send = function (from, to, subject, notification_text) {
@@ -26,4 +24,4 @@ exports.send = function (from, to, subject, notification_text) {
     subject: subject,
     html: htmlToSend,
   });
-};
+};*/
