@@ -7,13 +7,9 @@ var indexRouter = require("./routes/index");
 var apiRouter = require("./routes/api");
 var apiResponse = require("./helpers/apiResponse");
 var cors = require("cors");
-const admin = require("firebase-admin");
 const connectDB = require("./config/db");
-const firebaseConfig = require("./config/firebaseconfig");
 
 var app = express();
-
-admin.initializeApp(firebaseConfig);
 
 // Connect Database
 connectDB();
@@ -45,5 +41,9 @@ app.use((err, req, res) => {
 		return apiResponse.unauthorizedResponse(res, err.message);
 	}
 });
+
+const PORT = process.env.PORT || 4000;
+
+app.listen(PORT, () => console.log(`Server started at port ${PORT}`));
 
 module.exports = app;

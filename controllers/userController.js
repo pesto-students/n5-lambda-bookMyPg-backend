@@ -6,18 +6,6 @@ var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 const jwt = require("jsonwebtoken");
 
-// User Schema
-function UserData(data) {
-	this.id = data._id;
-	this.firstname = data.firstName;
-	this.lastname = data.lastName;
-	this.email = data.email;
-	this.phone = data.phone;
-	this.role = data.role;
-	this.isactive = data.isactive;
-	this.token = data.token;
-}
-
 async function filterQuery(data) {
 	try {
 		var filterString = {};
@@ -72,10 +60,9 @@ async function filterQuery(data) {
 				};
 			}
 		}
-		console.log(filterString);
 		return filterString;
 	} catch (err) {
-		console.log("Error in query");
+		throw new Error("Error in query");
 	}
 }
 
@@ -130,22 +117,11 @@ exports.userList = [
 
 				// Execute query and return response
 				query.exec(function (err, properties) {
-					if (err) console.log(err);
-					if (properties) {
-						if (properties.length > 0) {
-							return apiResponse.successResponseWithData(
-								res,
-								"Operation success",
-								properties,
-							);
-						} else {
-							return apiResponse.successResponseWithData(
-								res,
-								"Operation success",
-								[],
-							);
-						}
-					}
+					if (err) throw new Error(err);
+					const response = properties.length
+						? apiResponse.successResponseWithData(res, properties)
+						: apiResponse.successResponseWithData(res, []);
+					return response;
 				});
 			});
 		} catch (err) {
@@ -171,19 +147,11 @@ exports.userDetail = [
 			User.findOne({ _id: req.params.id })
 				.populate("property", ["name"])
 				.then(user => {
-					if (user !== null) {
-						let userData = new UserData(user);
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							userData,
-						);
-					} else {
-						return apiResponse.notFoundResponse(
-							res,
-							"No record found with this ID",
-						);
-					}
+					const response =
+            user !== null
+            	? apiResponse.successResponseWithData(res, user)
+            	: apiResponse.notFoundResponse(res);
+					return response;
 				});
 		} catch (err) {
 			// Throw error in json response with status 500.
@@ -208,30 +176,27 @@ exports.userDetailbyEmail = [
 			User.findOne({ email: req.params.email })
 				.populate("property", ["name"])
 				.then(user => {
+					const { _id, firstName, lastName, email, phone, role, isactive } =
+            user;
 					if (user !== null) {
+						// Generate token
 						const token = jwt.sign(
-							{
-								_id: user._id,
-								firstName: user.firstName,
-								lastName: user.lastName,
-								email: user.email,
-								role: user.role,
-							},
+							{ _id, email, role },
 							process.env.JWT_SECRET,
 						);
-
-						if (token) user.token = token;
-						let userData = new UserData(user);
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							userData,
-						);
+						const userData = {
+							_id,
+							firstName,
+							lastName,
+							email,
+							phone,
+							role,
+							isactive,
+							token,
+						};
+						return apiResponse.successResponseWithData(res, userData);
 					} else {
-						return apiResponse.notFoundResponse(
-							res,
-							"No record found with this Email",
-						);
+						return apiResponse.notFoundResponse(res);
 					}
 				});
 		} catch (err) {
@@ -288,38 +253,23 @@ exports.userStore = [
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
 				// Display sanitized values/errors messages.
-				return apiResponse.validationErrorWithData(
-					res,
-					"Validation Error.",
-					errors.array(),
-				);
+				return apiResponse.validationErrorWithData(res, errors.array());
 			} else {
+				const { firstName, lastName, email, phone } = req.body;
 				// Create User object with escaped and trimmed data
 				var user = new User({
-					firstName: req.body.firstName,
-					lastName: req.body.lastName,
-					email: req.body.email,
-					phone: req.body.phone,
+					firstName,
+					lastName,
+					email,
+					phone,
 				});
 
 				// Save user.
 				user.save(function (err) {
-					if (err) {
-						return apiResponse.ErrorResponse(res, err);
-					}
-					let userData = {
-						_id: user._id,
-						firstName: user.firstName,
-						lastName: user.lastName,
-						email: user.email,
-						phone: user.phone,
-						role: user.role,
-					};
-					return apiResponse.successResponseWithData(
-						res,
-						"User add Success.",
-						userData,
-					);
+					const response = err
+						? apiResponse.ErrorResponse(res, err)
+						: apiResponse.successResponseWithData(res, user);
+					return response;
 				});
 			}
 		} catch (err) {
@@ -342,33 +292,20 @@ exports.userDelete = [
 		try {
 			var user = { isactive: false };
 			if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-				return apiResponse.validationErrorWithData(
-					res,
-					"Invalid Error.",
-					"Invalid ID",
-				);
+				return apiResponse.validationErrorWithData(res, "Invalid ID");
 			} else {
 				User.findOne(
 					{ _id: req.params.id, isactive: true },
 					function (err, foundUser) {
 						if (foundUser === null) {
-							return apiResponse.notFoundResponse(
-								res,
-								"User does not exist with this id",
-							);
+							return apiResponse.notFoundResponse(res);
 						} else {
 							// Disable user.
 							User.findByIdAndUpdate(req.params.id, user, function (err) {
-								if (err) {
-									return apiResponse.ErrorResponse(res, err);
-								} else {
-									let userData = new UserData(user);
-									return apiResponse.successResponseWithData(
-										res,
-										"User update Success.",
-										userData,
-									);
-								}
+								const response = err
+									? apiResponse.ErrorResponse(res, err)
+									: apiResponse.successResponseWithData(res, user);
+								return response;
 							});
 						}
 					},
