@@ -31,8 +31,11 @@ exports.reviewList = [
 /**
  * Review store.
  *
- * @param {string}      rating
- * @param {string}      description
+ * @param {string}       rating
+ * @param {string}       description
+ *@param {ObjectId}      reviewedby
+ * @param {ObjectId}     property
+
  *
  * @returns {Object}
  */
