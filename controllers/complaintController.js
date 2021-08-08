@@ -1,4 +1,5 @@
 const Complaint = require("../models/complaintModel");
+const Property = require("../models/propertyModel");
 const { body, validationResult } = require("express-validator");
 const { sanitizeBody } = require("express-validator");
 const apiResponse = require("../helpers/apiResponse");
@@ -15,32 +16,120 @@ function ComplaintData(data) {
 	this.isactive = data.isactive;
 }
 
+async function filterQuery(data) {
+	try {
+		var filterString = {};
+		let res = "";
+		if (data.fromdate && data.todate) {
+			filterString["createdAt"] = [
+				{ $gte: new Date(data.fromdate) },
+				{ $lte: new Date(data.todate) },
+			];
+		} else if (data.fromdate) {
+			filterString["createdAt"] = {
+				$gte: new Date(data.fromdate),
+			};
+		} else if (data.todate) {
+			filterString["createdAt"] = {
+				$lte: new Date(data.todate),
+			};
+		}
+
+		if (data.search) {
+			res = await Property.find(
+				{
+					name: {
+						$regex: ".*" + data.search + ".*",
+						$options: "i",
+					},
+				},
+				{ _id: 1 },
+			);
+
+			if (res) {
+				filterString["property"] = { $in: res };
+			}
+		}
+		return filterString;
+	} catch (err) {
+		console.log("Error in query");
+	}
+}
+
 /**
  * Complaint List.
  *
  * @returns {Object}
  */
 exports.complaintList = [
-	function (req, res) {
+	async function (req, res) {
 		try {
-			Complaint.find()
-				.populate("property", ["name"])
-				.populate("raisedby", ["firstName", "lastName", "email", "phone"])
-				.then(complaints => {
-					if (complaints.length > 0) {
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							complaints,
-						);
+			var filterData = req.query;
+			if (filterData.orderby) {
+				if (filterData.orderby == "dsc") {
+					filterData["orderby"] = -1;
+				} else {
+					filterData["orderby"] = 1;
+				}
+			}
+
+			await filterQuery(req.query).then(filterString => {
+				let sortFilter = {};
+				var query = "";
+				// Based on query string parameters format query
+				if (filterData.pagenumber && filterData.countperpage) {
+					if (filterData.columnname && filterData.orderby) {
+						sortFilter["createdAt"] = filterData.orderby;
+						query = Complaint.find(filterString)
+							.populate("property", ["name"])
+							.populate("raisedby", ["firstName", "lastName", "email", "phone"])
+							.sort(sortFilter)
+							.skip(
+								(filterData.pagenumber - 1) * parseInt(filterData.countperpage),
+							)
+							.limit(parseInt(filterData.countperpage));
 					} else {
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							[],
-						);
+						query = Complaint.find(filterString)
+							.populate("property", ["name"])
+							.populate("raisedby", ["firstName", "lastName", "email", "phone"])
+							.sort(sortFilter)
+							.skip(
+								(filterData.pagenumber - 1) * parseInt(filterData.countperpage),
+							)
+							.limit(parseInt(filterData.countperpage));
+					}
+				} else if (filterData.columnname && filterData.orderby) {
+					sortFilter["createdAt"] = filterData.orderby;
+					query = Complaint.find(filterString)
+						.populate("property", ["name"])
+						.populate("raisedby", ["firstName", "lastName", "email", "phone"])
+						.sort(sortFilter);
+				} else {
+					query = Complaint.find(filterString)
+						.populate("property", ["name"])
+						.populate("raisedby", ["firstName", "lastName", "email", "phone"]);
+				}
+
+				// Execute query and return response
+				query.exec(function (err, complaints) {
+					if (err) console.log(err);
+					if (complaints) {
+						if (complaints.length > 0) {
+							return apiResponse.successResponseWithData(
+								res,
+								"Operation success",
+								complaints,
+							);
+						} else {
+							return apiResponse.successResponseWithData(
+								res,
+								"Operation success",
+								[],
+							);
+						}
 					}
 				});
+			});
 		} catch (err) {
 			// Throw error in json response with status 500.
 			return apiResponse.ErrorResponse(res, err);
