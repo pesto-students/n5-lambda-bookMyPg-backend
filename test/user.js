@@ -1,4 +1,4 @@
-const { chai, server } = require('./testConfig');
+const { chai, server } = require('./testconfig');
 const userModel = require('../models/userModel');
 const { testData } = require('../constants');
 /**
