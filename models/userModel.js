@@ -13,6 +13,7 @@ var UserSchema = new mongoose.Schema(
 			default: "user",
 		},
 		property: { type: mongoose.Types.ObjectId, ref: "property" },
+		onboardedAt: { type: Date },
 		isactive: { type: Boolean, required: true, default: 1 },
 	},
 	{ timestamps: true },
