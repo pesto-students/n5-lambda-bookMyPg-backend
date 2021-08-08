@@ -2,8 +2,6 @@ const Review = require("../models/reviewModel");
 const { body, validationResult } = require("express-validator");
 const { sanitizeBody } = require("express-validator");
 const apiResponse = require("../helpers/apiResponse");
-var mongoose = require("mongoose");
-mongoose.set("useFindAndModify", false);
 
 /**
  * Review List.
@@ -18,17 +16,9 @@ exports.reviewList = [
 				.populate("reviewedby", ["firstName", "lastName"])
 				.then(reviews => {
 					if (reviews.length > 0) {
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							reviews,
-						);
+						return apiResponse.successResponseWithData(res, reviews);
 					} else {
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							[],
-						);
+						return apiResponse.successResponseWithData(res, []);
 					}
 				});
 		} catch (err) {
@@ -62,37 +52,23 @@ exports.reviewStore = [
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
 				// Display sanitized values/errors messages.
-				return apiResponse.validationErrorWithData(
-					res,
-					"Validation Error.",
-					errors.array(),
-				);
+				return apiResponse.validationErrorWithData(res, errors.array());
 			} else {
 				// Create Review object with escaped and trimmed data
+				const { rating, description, reviewedby, property } = req.body;
 				var review = new Review({
-					rating: req.body.rating,
-					description: req.body.description,
-					reviewedby: req.body.reviewedby,
-					property: req.body.property,
+					rating,
+					description,
+					reviewedby,
+					property,
 				});
 
 				// Save review.
 				review.save(function (err) {
-					if (err) {
-						return apiResponse.ErrorResponse(res, err);
-					}
-					let reviewData = {
-						_id: review._id,
-						rating: review.rating,
-						description: review.description,
-						reviewedby: review.reviewedby,
-						property: review.property,
-					};
-					return apiResponse.successResponseWithData(
-						res,
-						"Review add Success.",
-						reviewData,
-					);
+					const response = err
+						? apiResponse.ErrorResponse(res, err)
+						: apiResponse.successResponseWithData(res, review);
+					return response;
 				});
 			}
 		} catch (err) {
