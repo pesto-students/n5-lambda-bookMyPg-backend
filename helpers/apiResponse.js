@@ -31,7 +31,7 @@ exports.notFoundResponse = function (res) {
 	return res.status(404).json(data);
 };
 
-exports.validationErrorWithData = function (res, msg, data) {
+exports.validationErrorWithData = function (res, data) {
 	var resData = {
 		status: 0,
 		message: "Invalid Input",

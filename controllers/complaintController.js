@@ -4,17 +4,6 @@ const { body, validationResult } = require("express-validator");
 const { sanitizeBody } = require("express-validator");
 const apiResponse = require("../helpers/apiResponse");
 var mongoose = require("mongoose");
-mongoose.set("useFindAndModify", false);
-
-// User Schema
-function ComplaintData(data) {
-	this.id = data._id;
-	this.status = data.status;
-	this.description = data.description;
-	this.raisedby = data.raisedby;
-	this.property = data.property;
-	this.isactive = data.isactive;
-}
 
 async function filterQuery(data) {
 	try {
@@ -52,7 +41,7 @@ async function filterQuery(data) {
 		}
 		return filterString;
 	} catch (err) {
-		console.log("Error in query");
+		throw new Error("Error in query");
 	}
 }
 
@@ -112,22 +101,12 @@ exports.complaintList = [
 
 				// Execute query and return response
 				query.exec(function (err, complaints) {
-					if (err) console.log(err);
-					if (complaints) {
-						if (complaints.length > 0) {
-							return apiResponse.successResponseWithData(
-								res,
-								"Operation success",
-								complaints,
-							);
-						} else {
-							return apiResponse.successResponseWithData(
-								res,
-								"Operation success",
-								[],
-							);
-						}
-					}
+					if (err) throw new Error(err);
+					const response =
+            complaints.length > 0
+            	? apiResponse.successResponseWithData(res, complaints)
+            	: apiResponse.successResponseWithData(res, []);
+					return response;
 				});
 			});
 		} catch (err) {
@@ -147,26 +126,18 @@ exports.complaintList = [
 exports.complaintDetail = [
 	function (req, res) {
 		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-			return apiResponse.validationErrorWithData(res, "Invalid ID");
+			return apiResponse.validationErrorWithData(res);
 		}
 		try {
 			Complaint.findOne({ _id: req.params.id })
 				.populate("property", ["name"])
 				.populate("raisedby", ["firstName", "lastName", "email", "phone"])
 				.then(complaint => {
-					if (complaint !== null) {
-						let complaintData = new ComplaintData(complaint);
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							complaintData,
-						);
-					} else {
-						return apiResponse.notFoundResponse(
-							res,
-							"No record found with this ID",
-						);
-					}
+					const response =
+            complaint !== null
+            	? apiResponse.successResponseWithData(res, complaint)
+            	: apiResponse.notFoundResponse(res);
+					return response;
 				});
 		} catch (err) {
 			// Throw error in json response with status 500.
@@ -197,11 +168,7 @@ exports.complaintStore = [
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
 				// Display sanitized values/errors messages.
-				return apiResponse.validationErrorWithData(
-					res,
-					"Validation Error.",
-					errors.array(),
-				);
+				return apiResponse.validationErrorWithData(res, errors.array());
 			} else {
 				// Create Complaint object with escaped and trimmed data
 				var complaint = new Complaint({
@@ -212,21 +179,10 @@ exports.complaintStore = [
 
 				// Save complaint.
 				complaint.save(function (err) {
-					if (err) {
-						return apiResponse.ErrorResponse(res, err);
-					}
-					let complaintData = {
-						_id: complaint._id,
-						description: complaint.description,
-						raisedby: complaint.raisedby,
-						property: complaint.property,
-						status: complaint.status,
-					};
-					return apiResponse.successResponseWithData(
-						res,
-						"Complaint add Success.",
-						complaintData,
-					);
+					const response = err
+						? apiResponse.ErrorResponse(res, err)
+						: apiResponse.successResponseWithData(res, complaint);
+					return response;
 				});
 			}
 		} catch (err) {
@@ -252,41 +208,24 @@ exports.complaintUpdate = [
 			const errors = validationResult(req);
 			var complaint = req.body;
 			if (!errors.isEmpty()) {
-				return apiResponse.validationErrorWithData(
-					res,
-					"Validation Error.",
-					errors.array(),
-				);
+				return apiResponse.validationErrorWithData(res, errors.array());
 			} else {
 				if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-					return apiResponse.validationErrorWithData(
-						res,
-						"Invalid Error.",
-						"Invalid ID",
-					);
+					return apiResponse.validationErrorWithData(res);
 				} else {
 					Complaint.findById(req.params.id, function (err, foundComplaint) {
 						if (foundComplaint === null) {
-							return apiResponse.notFoundResponse(
-								res,
-								"Complaint does not exist with this id",
-							);
+							return apiResponse.notFoundResponse(res);
 						} else {
 							//update complaint.
 							Complaint.findByIdAndUpdate(
 								req.params.id,
 								complaint,
 								function (err) {
-									if (err) {
-										return apiResponse.ErrorResponse(res, err);
-									} else {
-										let complaintData = new ComplaintData(complaint);
-										return apiResponse.successResponseWithData(
-											res,
-											"Complaint update Success.",
-											complaintData,
-										);
-									}
+									const response = err
+										? apiResponse.ErrorResponse(res, err)
+										: apiResponse.successResponseWithData(res, complaint);
+									return response;
 								},
 							);
 						}
