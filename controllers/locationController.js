@@ -12,11 +12,10 @@ exports.locationList = [
 	function (req, res) {
 		try {
 			Location.find().then(locations => {
-				if (locations.length > 0) {
-					return apiResponse.successResponseWithData(res, locations);
-				} else {
-					return apiResponse.successResponseWithData(res, []);
-				}
+				const response = locations.length
+					? apiResponse.successResponseWithData(res, locations)
+					: apiResponse.successResponseWithData(res, []);
+				return response;
 			});
 		} catch (err) {
 			// Throw error in json response with status 500.

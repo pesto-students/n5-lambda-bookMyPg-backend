@@ -15,11 +15,10 @@ exports.reviewList = [
 				.populate("property", ["name"])
 				.populate("reviewedby", ["firstName", "lastName"])
 				.then(reviews => {
-					if (reviews.length > 0) {
-						return apiResponse.successResponseWithData(res, reviews);
-					} else {
-						return apiResponse.successResponseWithData(res, []);
-					}
+					const response = reviews.length
+						? apiResponse.successResponseWithData(res, reviews)
+						: apiResponse.successResponseWithData(res, []);
+					return response;
 				});
 		} catch (err) {
 			// Throw error in json response with status 500.

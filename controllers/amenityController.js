@@ -13,10 +13,9 @@ exports.amenityList = [
 	function (req, res) {
 		try {
 			Amenity.find().then(amenities => {
-				const response =
-          amenities.length > 0
-          	? apiResponse.successResponseWithData(res, amenities)
-          	: apiResponse.successResponseWithData(res, []);
+				const response = amenities.length
+					? apiResponse.successResponseWithData(res, amenities)
+					: apiResponse.successResponseWithData(res, []);
 				return response;
 			});
 		} catch (err) {
