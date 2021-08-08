@@ -182,7 +182,7 @@ exports.userDetailbyEmail = [
 						// Generate token
 						const token = jwt.sign(
 							{ _id, email, role },
-							process.env.JWT_SECRET,
+							process.env.JWT_SECRET_KEY,
 						);
 						const userData = {
 							_id,

@@ -1,4 +1,4 @@
-var admin = require("firebase-admin");
+const jwt = require("jsonwebtoken");
 const apiResponse = require("../helpers/apiResponse");
 
 exports.protect = function (req, res, next) {
@@ -11,23 +11,16 @@ exports.protect = function (req, res, next) {
 	}
 
 	//Verify token
-
-	admin
-		.auth()
-		.verifyIdToken(token)
-		.then(decodedToken => {
-			console.log(decodedToken);
-			const uid = decodedToken.uid;
-			req.user = uid;
-			next();
-		})
-		.catch(error => {
-			// Handle error
-			console.log(error);
-			apiResponse.unauthorizedResponse(res, "Invalid Token");
-		});
+	try {
+		const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+		req.user = decoded;
+		next();
+	} catch (ex) {
+		apiResponse.unauthorizedResponse(res, "Invalid Token");
+	}
 };
 exports.restrictTo = (...roles) => {
+	console.log("roles", roles);
 	return (req, res, next) => {
 		if (!roles.includes(req.user.role)) {
 			return apiResponse.unauthorizedResponse(res, "Unauthorized Request");
