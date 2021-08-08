@@ -4,6 +4,7 @@ const { sanitizeBody } = require("express-validator");
 const apiResponse = require("../helpers/apiResponse");
 var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
+const jwt = require("jsonwebtoken");
 
 // User Schema
 function UserData(data) {
@@ -14,6 +15,7 @@ function UserData(data) {
 	this.phone = data.phone;
 	this.role = data.role;
 	this.isactive = data.isactive;
+	this.token = data.token;
 }
 
 /**
@@ -61,7 +63,7 @@ exports.userDetail = [
 			return apiResponse.validationErrorWithData(res, "Invalid ID");
 		}
 		try {
-			User.findOne({ _id: req.params.id, isactive: true })
+			User.findOne({ _id: req.params.id })
 				.populate("property", ["name"])
 				.then(user => {
 					if (user !== null) {
@@ -75,6 +77,55 @@ exports.userDetail = [
 						return apiResponse.notFoundResponse(
 							res,
 							"No record found with this ID",
+						);
+					}
+				});
+		} catch (err) {
+			// Throw error in json response with status 500.
+			return apiResponse.ErrorResponse(res, err);
+		}
+	},
+];
+
+/**
+ * User Detail.
+ *
+ * @param {string}      email
+ *
+ * @returns {Object}
+ */
+exports.userDetailbyEmail = [
+	function (req, res) {
+		if (!req.params.email) {
+			return apiResponse.validationErrorWithData(res, "Email is missing");
+		}
+		try {
+			User.findOne({ email: req.params.email })
+				.populate("property", ["name"])
+				.then(user => {
+					if (user !== null) {
+						const token = jwt.sign(
+							{
+								_id: user._id,
+								firstName: user.firstName,
+								lastName: user.lastName,
+								email: user.email,
+								role: user.role,
+							},
+							process.env.JWT_SECRET,
+						);
+
+						if (token) user.token = token;
+						let userData = new UserData(user);
+						return apiResponse.successResponseWithData(
+							res,
+							"Operation success",
+							userData,
+						);
+					} else {
+						return apiResponse.notFoundResponse(
+							res,
+							"No record found with this Email",
 						);
 					}
 				});
