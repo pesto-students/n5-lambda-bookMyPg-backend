@@ -5,18 +5,20 @@ const role = require("../helpers/roles");
 
 var router = express.Router();
 
-router.get(
-	"/",
-	auth.protect,
-	auth.restrictTo(role.Admin, role.User),
-	userController.userList,
-);
+router.get("/", userController.userList);
 router.get(
 	"/:id",
 	auth.protect,
-	auth.restrictTo(role.Admin, role.User),
+	auth.restrictTo(role.Admin, role.Owner),
 	userController.userDetail,
 );
+router.get("/user/:email", auth.protect, userController.userDetailbyEmail);
 router.post("/", userController.userStore);
+router.delete(
+	"/:id",
+	auth.protect,
+	auth.restrictTo(role.Owner),
+	userController.userDelete,
+);
 
 module.exports = router;

@@ -7,7 +7,6 @@ var indexRouter = require("./routes/index");
 var apiRouter = require("./routes/api");
 var apiResponse = require("./helpers/apiResponse");
 var cors = require("cors");
-
 const connectDB = require("./config/db");
 
 var app = express();
@@ -42,5 +41,9 @@ app.use((err, req, res) => {
 		return apiResponse.unauthorizedResponse(res, err.message);
 	}
 });
+
+const PORT = process.env.PORT || 4000;
+
+app.listen(PORT, () => console.log(`Server started at port ${PORT}`));
 
 module.exports = app;

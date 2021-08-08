@@ -3,16 +3,6 @@ const { body, validationResult } = require("express-validator");
 const { sanitizeBody } = require("express-validator");
 const apiResponse = require("../helpers/apiResponse");
 var mongoose = require("mongoose");
-mongoose.set("useFindAndModify", false);
-//const jwt = require('jsonwebtoken');
-
-// Amenity Schema
-function AmenityData(data) {
-	this.id = data._id;
-	this.name = data.name;
-	this.logo = data.logo;
-	this.isactive = data.isactive;
-}
 
 /**
  * Amenity List.
@@ -23,22 +13,12 @@ exports.amenityList = [
 	function (req, res) {
 		try {
 			Amenity.find().then(amenities => {
-				if (amenities.length > 0) {
-					return apiResponse.successResponseWithData(
-						res,
-						"Operation success",
-						amenities,
-					);
-				} else {
-					return apiResponse.successResponseWithData(
-						res,
-						"Operation success",
-						[],
-					);
-				}
+				const response = amenities.length
+					? apiResponse.successResponseWithData(res, amenities)
+					: apiResponse.successResponseWithData(res, []);
+				return response;
 			});
 		} catch (err) {
-			// Throw error in json response with status 500.
 			return apiResponse.ErrorResponse(res, err);
 		}
 	},
@@ -54,23 +34,15 @@ exports.amenityList = [
 exports.amenityDetail = [
 	function (req, res) {
 		if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-			return apiResponse.validationErrorWithData(res, "Invalid ID");
+			return apiResponse.validationErrorWithData(res);
 		}
 		try {
 			Amenity.findOne({ _id: req.params.id }).then(amenity => {
-				if (amenity !== null) {
-					let amenityData = new AmenityData(amenity);
-					return apiResponse.successResponseWithData(
-						res,
-						"Operation success",
-						amenityData,
-					);
-				} else {
-					return apiResponse.notFoundResponse(
-						res,
-						"No record found with this ID",
-					);
-				}
+				const response =
+          amenity !== null
+          	? apiResponse.successResponseWithData(res, amenity)
+          	: apiResponse.notFoundResponse(res);
+				return response;
 			});
 		} catch (err) {
 			// Throw error in json response with status 500.
@@ -114,11 +86,7 @@ exports.amenityStore = [
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
 				// Display sanitized values/errors messages.
-				return apiResponse.validationErrorWithData(
-					res,
-					"Validation Error.",
-					errors.array(),
-				);
+				return apiResponse.validationErrorWithData(res, errors.array());
 			} else {
 				// Create Amenity object with escaped and trimmed data
 				var amenity = new Amenity({
@@ -131,20 +99,10 @@ exports.amenityStore = [
 					if (err) {
 						return apiResponse.ErrorResponse(res, err);
 					}
-					let amenityData = {
-						_id: amenity._id,
-						name: amenity.name,
-						logo: amenity.logo,
-					};
-					return apiResponse.successResponseWithData(
-						res,
-						"Amenity add Success.",
-						amenityData,
-					);
+					return apiResponse.successResponseWithData(res, amenity);
 				});
 			}
 		} catch (err) {
-			// Throw error in json response with status 500.
 			return apiResponse.ErrorResponse(res, err);
 		}
 	},

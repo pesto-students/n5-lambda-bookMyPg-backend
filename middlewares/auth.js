@@ -12,15 +12,15 @@ exports.protect = function (req, res, next) {
 
 	//Verify token
 	try {
-		const decoded = jwt.verify(token, process.env.JWT_SECRET);
+		const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 		req.user = decoded;
 		next();
-	} catch (err) {
+	} catch (ex) {
 		apiResponse.unauthorizedResponse(res, "Invalid Token");
 	}
 };
-
 exports.restrictTo = (...roles) => {
+	console.log("roles", roles);
 	return (req, res, next) => {
 		if (!roles.includes(req.user.role)) {
 			return apiResponse.unauthorizedResponse(res, "Unauthorized Request");

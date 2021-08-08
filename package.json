@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Backend code for BookMyPG",
   "scripts": {
-    "start": "node ./bin/www",
-    "dev": "nodemon ./bin/www",
+    "start": "node app",
+    "dev": "nodemon app",
     "test": "nyc _mocha --timeout 10000 --exit --report lcovonly -- -R spec",
     "lint": "eslint --fix --config .eslintrc.json \"**/*.js\"",
     "linting": "lint-staged"

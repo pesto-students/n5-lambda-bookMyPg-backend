@@ -6,15 +6,64 @@ var mongoose = require("mongoose");
 mongoose.set("useFindAndModify", false);
 const jwt = require("jsonwebtoken");
 
-// User Schema
-function UserData(data) {
-	this.id = data._id;
-	this.firstname = data.firstName;
-	this.lastname = data.lastName;
-	this.email = data.email;
-	this.phone = data.phone;
-	this.role = data.role;
-	this.isactive = data.isactive;
+async function filterQuery(data) {
+	try {
+		var filterString = {};
+		if (data.type) {
+			if (data.type === "tenant") {
+				filterString["property"] = { $exists: true };
+			}
+		}
+		console.log(data.type);
+		if (data.fromdate && data.todate) {
+			filterString["onboardedAt"] = [
+				{ $gte: new Date(data.fromdate) },
+				{ $lte: new Date(data.todate) },
+			];
+		} else if (data.fromdate) {
+			filterString["onboardedAt"] = {
+				$gte: new Date(data.fromdate),
+			};
+		} else if (data.todate) {
+			filterString["onboardedAt"] = {
+				$lte: new Date(data.todate),
+			};
+		}
+
+		if (data.search) {
+			let searchString = [];
+			searchString = data.search.split(" ");
+			if (searchString.length === 1) {
+				let searchFilter = {};
+				let searchQuery = [];
+				searchFilter["firstName"] = {
+					$regex: ".*" + searchString[0] + ".*",
+					$options: "i",
+				};
+				searchQuery.push(searchFilter);
+				searchFilter = {};
+				searchFilter["lastName"] = {
+					$regex: ".*" + searchString[0] + ".*",
+					$options: "i",
+				};
+				searchQuery.push(searchFilter);
+				filterString["$or"] = searchQuery;
+			} else if (searchString[0]) {
+				filterString["firstName"] = {
+					$regex: ".*" + searchString[0] + ".*",
+					$options: "i",
+				};
+			} else if (searchString[1]) {
+				filterString["lastName"] = {
+					$regex: ".*" + searchString[1] + ".*",
+					$options: "i",
+				};
+			}
+		}
+		return filterString;
+	} catch (err) {
+		throw new Error("Error in query");
+	}
 }
 
 /**
@@ -23,22 +72,57 @@ function UserData(data) {
  * @returns {Object}
  */
 exports.userList = [
-	function (req, res) {
+	async function (req, res) {
 		try {
-			User.find().then(users => {
-				if (users.length > 0) {
-					return apiResponse.successResponseWithData(
-						res,
-						"Operation success",
-						users,
-					);
+			var filterData = req.query;
+			if (filterData.orderby) {
+				if (filterData.orderby == "dsc") {
+					filterData["orderby"] = -1;
 				} else {
-					return apiResponse.successResponseWithData(
-						res,
-						"Operation success",
-						[],
-					);
+					filterData["orderby"] = 1;
 				}
+			}
+
+			await filterQuery(req.query).then(filterString => {
+				let sortFilter = {};
+				var query = "";
+				// Based on query string parameters format query
+				if (filterData.pagenumber && filterData.countperpage) {
+					if (filterData.columnname && filterData.orderby) {
+						sortFilter["onboardedAt"] = filterData.orderby;
+						query = User.find(filterString)
+							.populate("property", ["name"])
+							.sort(sortFilter)
+							.skip(
+								(filterData.pagenumber - 1) * parseInt(filterData.countperpage),
+							)
+							.limit(parseInt(filterData.countperpage));
+					} else {
+						query = User.find(filterString)
+							.populate("property", ["name"])
+							.sort(sortFilter)
+							.skip(
+								(filterData.pagenumber - 1) * parseInt(filterData.countperpage),
+							)
+							.limit(parseInt(filterData.countperpage));
+					}
+				} else if (filterData.columnname && filterData.orderby) {
+					sortFilter["onboardedAt"] = filterData.orderby;
+					query = User.find(filterString)
+						.populate("property", ["name"])
+						.sort(sortFilter);
+				} else {
+					query = User.find(filterString).populate("property", ["name"]);
+				}
+
+				// Execute query and return response
+				query.exec(function (err, properties) {
+					if (err) throw new Error(err);
+					const response = properties.length
+						? apiResponse.successResponseWithData(res, properties)
+						: apiResponse.successResponseWithData(res, []);
+					return response;
+				});
 			});
 		} catch (err) {
 			// Throw error in json response with status 500.
@@ -60,21 +144,61 @@ exports.userDetail = [
 			return apiResponse.validationErrorWithData(res, "Invalid ID");
 		}
 		try {
-			User.findOne({ _id: req.params.id }).then(user => {
-				if (user !== null) {
-					let userData = new UserData(user);
-					return apiResponse.successResponseWithData(
-						res,
-						"Operation success",
-						userData,
-					);
-				} else {
-					return apiResponse.notFoundResponse(
-						res,
-						"No record found with this ID",
-					);
-				}
-			});
+			User.findOne({ _id: req.params.id })
+				.populate("property", ["name"])
+				.then(user => {
+					const response =
+            user !== null
+            	? apiResponse.successResponseWithData(res, user)
+            	: apiResponse.notFoundResponse(res);
+					return response;
+				});
+		} catch (err) {
+			// Throw error in json response with status 500.
+			return apiResponse.ErrorResponse(res, err);
+		}
+	},
+];
+
+/**
+ * User Detail.
+ *
+ * @param {string}      email
+ *
+ * @returns {Object}
+ */
+exports.userDetailbyEmail = [
+	function (req, res) {
+		if (!req.params.email) {
+			return apiResponse.validationErrorWithData(res, "Email is missing");
+		}
+		try {
+			User.findOne({ email: req.params.email })
+				.populate("property", ["name"])
+				.then(user => {
+					const { _id, firstName, lastName, email, phone, role, isactive } =
+            user;
+					if (user !== null) {
+						// Generate token
+						const token = jwt.sign(
+							{ _id, email, role },
+							process.env.JWT_SECRET_KEY,
+						);
+						const userData = {
+							_id,
+							firstName,
+							lastName,
+							email,
+							phone,
+							role,
+							isactive,
+							token,
+						};
+						return apiResponse.successResponseWithData(res, userData);
+					} else {
+						return apiResponse.notFoundResponse(res);
+					}
+				});
 		} catch (err) {
 			// Throw error in json response with status 500.
 			return apiResponse.ErrorResponse(res, err);
@@ -121,6 +245,7 @@ exports.userStore = [
 	sanitizeBody("firstName").escape(),
 	sanitizeBody("lastName").escape(),
 	sanitizeBody("email").escape(),
+	sanitizeBody("phone").escape(),
 	// Process request after validation and sanitization.
 	(req, res) => {
 		try {
@@ -128,50 +253,66 @@ exports.userStore = [
 			const errors = validationResult(req);
 			if (!errors.isEmpty()) {
 				// Display sanitized values/errors messages.
-				return apiResponse.validationErrorWithData(
-					res,
-					"Validation Error.",
-					errors.array(),
-				);
+				return apiResponse.validationErrorWithData(res, errors.array());
 			} else {
+				const { firstName, lastName, email, phone } = req.body;
 				// Create User object with escaped and trimmed data
 				var user = new User({
-					firstName: req.body.firstName,
-					lastName: req.body.lastName,
-					email: req.body.email,
-					phone: req.body.phone,
+					firstName,
+					lastName,
+					email,
+					phone,
 				});
 
 				// Save user.
 				user.save(function (err) {
-					if (err) {
-						return apiResponse.ErrorResponse(res, err);
-					}
-					let userData = {
-						_id: user._id,
-						firstName: user.firstName,
-						lastName: user.lastName,
-						email: user.email,
-						phone: user.phone,
-						role: user.role,
-					};
-					//Prepare JWT token for authentication
-					const jwtPayload = userData;
-					const jwtData = {
-						expiresIn: process.env.JWT_TIMEOUT_DURATION,
-					};
-					const secret = process.env.JWT_SECRET;
-					//Generated JWT token with Payload and secret.
-					userData.token = jwt.sign(jwtPayload, secret, jwtData);
-					return apiResponse.successResponseWithData(
-						res,
-						"User add Success.",
-						userData,
-					);
+					const response = err
+						? apiResponse.ErrorResponse(res, err)
+						: apiResponse.successResponseWithData(res, user);
+					return response;
 				});
 			}
 		} catch (err) {
 			// Throw error in json response with status 500.
+			return apiResponse.ErrorResponse(res, err);
+		}
+	},
+];
+
+/**
+ * User disable.
+ *
+ * @param {string}      id
+ *
+ *
+ * @returns {Object}
+ */
+exports.userDelete = [
+	(req, res) => {
+		try {
+			var user = { isactive: false };
+			if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+				return apiResponse.validationErrorWithData(res, "Invalid ID");
+			} else {
+				User.findOne(
+					{ _id: req.params.id, isactive: true },
+					function (err, foundUser) {
+						if (foundUser === null) {
+							return apiResponse.notFoundResponse(res);
+						} else {
+							// Disable user.
+							User.findByIdAndUpdate(req.params.id, user, function (err) {
+								const response = err
+									? apiResponse.ErrorResponse(res, err)
+									: apiResponse.successResponseWithData(res, user);
+								return response;
+							});
+						}
+					},
+				);
+			}
+		} catch (err) {
+			//throw error in json response with status 500.
 			return apiResponse.ErrorResponse(res, err);
 		}
 	},
