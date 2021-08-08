@@ -10,12 +10,12 @@ var emailRouter = require("./email");
 var app = express();
 
 app.use("/users/", userRouter);
-app.use("/amenity/", amenityRouter);
-app.use("/property/", propertyRouter);
-app.use("/location/", locationRouter);
-app.use("/review/", reviewRouter);
-app.use("/complaint/", complaintRouter);
-app.use("/payment/", paymentRouter);
-app.use("/email/", emailRouter);
+app.use("/amenities/", amenityRouter);
+app.use("/properties/", propertyRouter);
+app.use("/locations/", locationRouter);
+app.use("/reviews/", reviewRouter);
+app.use("/complaints/", complaintRouter);
+app.use("/payments/", paymentRouter);
+app.use("/emails/", emailRouter);
 
 module.exports = app;

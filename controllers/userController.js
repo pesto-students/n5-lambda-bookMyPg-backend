@@ -14,7 +14,6 @@ async function filterQuery(data) {
 				filterString["property"] = { $exists: true };
 			}
 		}
-		console.log(data.type);
 		if (data.fromdate && data.todate) {
 			filterString["onboardedAt"] = [
 				{ $gte: new Date(data.fromdate) },

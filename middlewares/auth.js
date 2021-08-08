@@ -20,7 +20,6 @@ exports.protect = function (req, res, next) {
 	}
 };
 exports.restrictTo = (...roles) => {
-	console.log("roles", roles);
 	return (req, res, next) => {
 		if (!roles.includes(req.user.role)) {
 			return apiResponse.unauthorizedResponse(res, "Unauthorized Request");
