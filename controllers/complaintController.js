@@ -102,10 +102,9 @@ exports.complaintList = [
 				// Execute query and return response
 				query.exec(function (err, complaints) {
 					if (err) throw new Error(err);
-					const response =
-            complaints.length > 0
-            	? apiResponse.successResponseWithData(res, complaints)
-            	: apiResponse.successResponseWithData(res, []);
+					const response = complaints.length
+						? apiResponse.successResponseWithData(res, complaints)
+						: apiResponse.successResponseWithData(res, []);
 					return response;
 				});
 			});

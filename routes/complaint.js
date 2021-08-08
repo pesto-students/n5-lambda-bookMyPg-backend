@@ -1,13 +1,28 @@
 var express = require("express");
 const complaintController = require("../controllers/complaintController");
-//const auth = require('../middlewares/auth');
-//const role = require('../helpers/roles');
+const auth = require("../middlewares/auth");
+const role = require("../helpers/roles");
 
 var router = express.Router();
 
-router.get("/", complaintController.complaintList);
-router.get("/:id", complaintController.complaintDetail);
-router.post("/", complaintController.complaintStore);
-router.put("/:id", complaintController.complaintUpdate);
+router.get(
+	"/",
+	auth.protect,
+	auth.restrictTo(role.Owner),
+	complaintController.complaintList,
+);
+router.get(
+	"/:id",
+	auth.protect,
+	auth.restrictTo(role.Owner),
+	complaintController.complaintDetail,
+);
+router.post("/", auth.protect, complaintController.complaintStore);
+router.put(
+	"/:id",
+	auth.protect,
+	auth.restrictTo(role.Owner),
+	complaintController.complaintUpdate,
+);
 
 module.exports = router;
