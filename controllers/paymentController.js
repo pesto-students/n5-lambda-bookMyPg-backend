@@ -1,7 +1,5 @@
 const Transaction = require("../models/transactionModel");
 const apiResponse = require("../helpers/apiResponse");
-var mongoose = require("mongoose");
-mongoose.set("useFindAndModify", false);
 
 /**
  * Amenity store.
@@ -22,18 +20,10 @@ exports.paymentStore = [
 
 			// Save amenity.
 			transaction.save(function (err) {
-				if (err) {
-					return apiResponse.ErrorResponse(res, err);
-				}
-				let transData = {
-					_id: transaction._id,
-					email: transaction.name,
-				};
-				return apiResponse.successResponseWithData(
-					res,
-					"Transaction add Success.",
-					transData,
-				);
+				const response = err
+					? apiResponse.ErrorResponse(res, err)
+					: apiResponse.successResponseWithData(res, transaction);
+				return response;
 			});
 		} catch (err) {
 			// Throw error in json response with status 500.
