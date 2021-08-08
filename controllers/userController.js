@@ -18,31 +18,136 @@ function UserData(data) {
 	this.token = data.token;
 }
 
+async function filterQuery(data) {
+	try {
+		var filterString = {};
+		if (data.type) {
+			if (data.type === "tenant") {
+				filterString["property"] = { $exists: true };
+			}
+		}
+		console.log(data.type);
+		if (data.fromdate && data.todate) {
+			filterString["onboardedAt"] = [
+				{ $gte: new Date(data.fromdate) },
+				{ $lte: new Date(data.todate) },
+			];
+		} else if (data.fromdate) {
+			filterString["onboardedAt"] = {
+				$gte: new Date(data.fromdate),
+			};
+		} else if (data.todate) {
+			filterString["onboardedAt"] = {
+				$lte: new Date(data.todate),
+			};
+		}
+
+		if (data.search) {
+			let searchString = [];
+			searchString = data.search.split(" ");
+			if (searchString.length === 1) {
+				let searchFilter = {};
+				let searchQuery = [];
+				searchFilter["firstName"] = {
+					$regex: ".*" + searchString[0] + ".*",
+					$options: "i",
+				};
+				searchQuery.push(searchFilter);
+				searchFilter = {};
+				searchFilter["lastName"] = {
+					$regex: ".*" + searchString[0] + ".*",
+					$options: "i",
+				};
+				searchQuery.push(searchFilter);
+				filterString["$or"] = searchQuery;
+			} else if (searchString[0]) {
+				filterString["firstName"] = {
+					$regex: ".*" + searchString[0] + ".*",
+					$options: "i",
+				};
+			} else if (searchString[1]) {
+				filterString["lastName"] = {
+					$regex: ".*" + searchString[1] + ".*",
+					$options: "i",
+				};
+			}
+		}
+		console.log(filterString);
+		return filterString;
+	} catch (err) {
+		console.log("Error in query");
+	}
+}
+
 /**
  * User List.
  *
  * @returns {Object}
  */
 exports.userList = [
-	function (req, res) {
+	async function (req, res) {
 		try {
-			User.find()
-				.populate("property", ["name"])
-				.then(users => {
-					if (users.length > 0) {
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							users,
-						);
+			var filterData = req.query;
+			if (filterData.orderby) {
+				if (filterData.orderby == "dsc") {
+					filterData["orderby"] = -1;
+				} else {
+					filterData["orderby"] = 1;
+				}
+			}
+
+			await filterQuery(req.query).then(filterString => {
+				let sortFilter = {};
+				var query = "";
+				// Based on query string parameters format query
+				if (filterData.pagenumber && filterData.countperpage) {
+					if (filterData.columnname && filterData.orderby) {
+						sortFilter["onboardedAt"] = filterData.orderby;
+						query = User.find(filterString)
+							.populate("property", ["name"])
+							.sort(sortFilter)
+							.skip(
+								(filterData.pagenumber - 1) * parseInt(filterData.countperpage),
+							)
+							.limit(parseInt(filterData.countperpage));
 					} else {
-						return apiResponse.successResponseWithData(
-							res,
-							"Operation success",
-							[],
-						);
+						query = User.find(filterString)
+							.populate("property", ["name"])
+							.sort(sortFilter)
+							.skip(
+								(filterData.pagenumber - 1) * parseInt(filterData.countperpage),
+							)
+							.limit(parseInt(filterData.countperpage));
+					}
+				} else if (filterData.columnname && filterData.orderby) {
+					sortFilter["onboardedAt"] = filterData.orderby;
+					query = User.find(filterString)
+						.populate("property", ["name"])
+						.sort(sortFilter);
+				} else {
+					query = User.find(filterString).populate("property", ["name"]);
+				}
+
+				// Execute query and return response
+				query.exec(function (err, properties) {
+					if (err) console.log(err);
+					if (properties) {
+						if (properties.length > 0) {
+							return apiResponse.successResponseWithData(
+								res,
+								"Operation success",
+								properties,
+							);
+						} else {
+							return apiResponse.successResponseWithData(
+								res,
+								"Operation success",
+								[],
+							);
+						}
 					}
 				});
+			});
 		} catch (err) {
 			// Throw error in json response with status 500.
 			return apiResponse.ErrorResponse(res, err);
