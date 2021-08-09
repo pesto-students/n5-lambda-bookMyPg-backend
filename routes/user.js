@@ -12,7 +12,7 @@ router.get(
 	auth.restrictTo(role.Admin, role.Owner),
 	userController.userDetail,
 );
-router.get("/user/:email", auth.protect, userController.userDetailbyEmail);
+router.get("/user/:email", userController.userDetailbyEmail);
 router.post("/", userController.userStore);
 router.delete(
 	"/:id",
