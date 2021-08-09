@@ -13,17 +13,16 @@ const filePath = path.join(__dirname, '../email-template/template.html');
 const source = fs.readFileSync(filePath, 'utf-8').toString();
 const template = handlebars.compile(source);
 
-exports.send = function (from, to, subject, notification_text) {
-  console.log(notification_text);
+exports.send = function (from, to, emailReplacements) {
   const replacements = {
-    notification_text: notification_text,
+    notification_text: emailReplacements.notification_text,
   };
 
   const htmlToSend = template(replacements);
   return transporter.sendMail({
     from: from,
     to: to,
-    subject: subject,
+    subject: emailReplacements.subject,
     html: htmlToSend,
   });
 };
