@@ -1,6 +1,7 @@
 var nodemailer = require('nodemailer');
 var fs = require('fs');
 var handlebars = require('handlebars');
+var path = require('path');
 var transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -8,13 +9,12 @@ var transporter = nodemailer.createTransport({
     pass: process.env.ADMIN_PASSWORD,
   },
 });
-
-var source = fs
-  .readFileSync('../email-template/template.html', 'utf-8')
-  .toString();
-var template = handlebars.compile(source);
+const filePath = path.join(__dirname, '../email-template/template.html');
+const source = fs.readFileSync(filePath, 'utf-8').toString();
+const template = handlebars.compile(source);
 
 exports.send = function (from, to, subject, notification_text) {
+  console.log(notification_text);
   const replacements = {
     notification_text: notification_text,
   };
