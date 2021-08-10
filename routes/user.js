@@ -6,12 +6,7 @@ const role = require("../helpers/roles");
 var router = express.Router();
 
 router.get("/", userController.userList);
-router.get(
-	"/:id",
-	auth.protect,
-	auth.restrictTo(role.Admin, role.Owner),
-	userController.userDetail,
-);
+router.get("/:id", userController.userDetail);
 router.get("/user/:email", userController.userDetailbyEmail);
 router.post("/", userController.userStore);
 router.delete(
