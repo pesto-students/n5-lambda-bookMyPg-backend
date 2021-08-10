@@ -1,7 +1,7 @@
 exports.visitTemplate = function (data) {
   let text = '';
   var emailReplacements = {
-    subject: '[BookMyPG] New Visit Scheduled',
+    subject: 'Greetings! New Visit Scheduled',
     notification_text: text.concat(
       'New visit is scheduled for <i>',
       data.property,
@@ -20,7 +20,7 @@ exports.visitTemplate = function (data) {
 exports.userratingTemplate = function (data) {
   let text = '';
   var emailReplacements = {
-    subject: '[BookMyPG] Your Profile is Rated',
+    subject: 'Greetings! Your Profile is Rated',
     notification_text: text.concat(
       data.owner,
       ' - Owner of <i>',
@@ -38,7 +38,7 @@ exports.userratingTemplate = function (data) {
 exports.propertyratingTemplate = function (data) {
   let text = '';
   var emailReplacements = {
-    subject: '[BookMyPG] Your Property is Rated',
+    subject: 'Greetings! Your Property is Rated',
     notification_text: text.concat(
       'Tenant <i>',
       data.user,
@@ -59,7 +59,7 @@ exports.propertyratingTemplate = function (data) {
 exports.queryTemplate = function (data) {
   let text = '';
   var emailReplacements = {
-    subject: '[BookMyPG] New Query Received',
+    subject: 'Greetings! New Query Received',
     notification_text: text.concat(
       'New Query is received: ',
       data.description,
