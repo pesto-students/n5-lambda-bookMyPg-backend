@@ -6,24 +6,26 @@ const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
 var mongoose = require('mongoose');
 const constants = require('../constants');
+const ObjectId = mongoose.Types.ObjectId;
 
 async function filterQuery(data) {
   try {
     var filterString = {};
     let res = '';
 
+    // Filter based on Gender
     if (data.gender) {
-      let genderList = data.gender.split(',');
-
-      filterString['gender'] = { $in: genderList };
+      filterString['gender'] = { $in: data.gender.split(',') };
     }
+
+    // Filter based on Rent
     if (data.rent) {
       let rentList = data.rent.split(',').map(Number);
       let rentFilterList = [];
       let rentFilterString = {};
       rentList.map(rent => {
         rentFilterString['rent'] = {
-          $lt: constants.RENT_FILTER_CONVENTIONS[rent]['less_than'],
+          $lte: constants.RENT_FILTER_CONVENTIONS[rent]['less_than'],
           $gte: constants.RENT_FILTER_CONVENTIONS[rent]['greater_than'],
         };
         rentFilterList.push(rentFilterString);
@@ -31,6 +33,8 @@ async function filterQuery(data) {
       });
       filterString['$or'] = rentFilterList;
     }
+
+    // Search based on Location
     if (data.search) {
       res = await Location.findOne({ name: data.search });
 
@@ -39,20 +43,58 @@ async function filterQuery(data) {
       }
     }
 
+    // Filter based on Ratings
     if (data.ratings) {
-      let ratingsList = data.ratings.split(',').map(Number);
-
       res = await Review.distinct('property', {
-        rating: { $in: ratingsList },
+        rating: { $in: data.ratings.split(',').map(Number) },
       });
       if (res) {
         filterString['_id'] = { $in: res };
       }
     }
-
     return filterString;
   } catch (err) {
     throw new Error('Error in query');
+  }
+}
+
+async function getReviewAnalysis(property_id) {
+  if (property_id) {
+    // Get reviews
+    reviews = await Review.find({
+      property: property_id,
+    });
+
+    // Find review analysis
+    if (reviews) {
+      totalDocument = reviews.length;
+      review_percentage = await Review.aggregate([
+        { $match: { property: ObjectId(property_id) } },
+        {
+          $group: {
+            _id: '$rating',
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $project: {
+            count: 1,
+            percentage: {
+              $trunc: [
+                { $multiply: [{ $divide: [100, totalDocument] }, '$count'] },
+                2,
+              ],
+            },
+          },
+        },
+      ]);
+    }
+    if (review_percentage) {
+      review_res = { reviews: reviews, reviewanalysis: review_percentage };
+      return review_res;
+    }
   }
 }
 
@@ -120,6 +162,7 @@ exports.propertyList = [
         // Execute query and return response
         query.exec(function (err, properties) {
           if (err) throw new Error(err);
+
           const response = properties.length
             ? apiResponse.successResponseWithData(res, properties)
             : apiResponse.successResponseWithData(res, []);
@@ -141,23 +184,28 @@ exports.propertyList = [
  * @returns {Object}
  */
 exports.propertyDetail = [
-  function (req, res) {
+  async function (req, res) {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return apiResponse.validationErrorWithData(res, 'Invalid ID');
     }
     try {
-      Property.findOne({ _id: req.params.id })
-        .populate('location', constants.POPULATE_LOCATION_FIELDS)
-        .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-        .populate('owner', constants.POPULATE_USER_FIELDS)
-        .populate('numreviews')
-        .then(property => {
-          const response =
-            property !== null
-              ? apiResponse.successResponseWithData(res, property)
-              : apiResponse.notFoundResponse(res);
-          return response;
-        });
+      await getReviewAnalysis(req.params.id).then(result => {
+        Property.findOne({ _id: req.params.id })
+          .populate('location', constants.POPULATE_LOCATION_FIELDS)
+          .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+          .populate('owner', constants.POPULATE_USER_FIELDS)
+          .populate('numreviews')
+          .then(property => {
+            if (property !== null) {
+              var final_response = {};
+              final_response['propertydata'] = property;
+              final_response['reviewdata'] = result;
+              return apiResponse.successResponseWithData(res, final_response);
+            } else {
+              apiResponse.successResponseWithData(res, []);
+            }
+          });
+      });
     } catch (err) {
       // Throw error in json response with status 500.
       return apiResponse.ErrorResponse(res, err);

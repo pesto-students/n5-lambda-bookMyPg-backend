@@ -17,6 +17,7 @@ module.exports = {
   POPULATE_AMENITY_FIELDS: ['name', 'logo'],
   POPULATE_LOCATION_FIELDS: ['name'],
   POPULATE_PROPERTY_FIELDS: ['name'],
+  POPULATE_REVIEW_FIELDS: ['rating', 'description', 'createdAt'],
   EMAIL_TEMPLATE_TEXT: {
     Visit: 'visitTemplate',
     Userrating: 'userratingTemplate',

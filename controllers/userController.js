@@ -23,7 +23,9 @@ async function filterQuery(data) {
       if (data.todate) {
         dateFilter['$lte'] = new Date(data.todate);
       }
-      filterString['onboardedAt'] = dateFilter;
+      data.type === 'tenant'
+        ? (filterString['onboardedAt'] = dateFilter)
+        : (filterString['createdAt'] = dateFilter);
     }
 
     if (data.search) {
@@ -287,6 +289,48 @@ exports.userDelete = [
             }
           },
         );
+      }
+    } catch (err) {
+      //throw error in json response with status 500.
+      return apiResponse.ErrorResponse(res, err);
+    }
+  },
+];
+
+/**
+ * User update.
+ *
+ * @param {string}      id
+ *
+ *
+ * @returns {Object}
+ */
+exports.userUpdate = [
+  sanitizeBody('*').escape(),
+  (req, res) => {
+    try {
+      const errors = validationResult(req);
+      var user = req.body;
+      if (!errors.isEmpty()) {
+        return apiResponse.validationErrorWithData(res, errors.array());
+      } else {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+          return apiResponse.validationErrorWithData(res);
+        } else {
+          User.findById(req.params.id, function (err, foundUser) {
+            if (foundUser === null) {
+              return apiResponse.notFoundResponse(res);
+            } else {
+              // Update user.
+              User.findByIdAndUpdate(req.params.id, user, function (err) {
+                const response = err
+                  ? apiResponse.ErrorResponse(res, err)
+                  : apiResponse.successResponseWithData(res, user);
+                return response;
+              });
+            }
+          });
+        }
       }
     } catch (err) {
       //throw error in json response with status 500.

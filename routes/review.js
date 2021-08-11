@@ -5,6 +5,6 @@ var router = express.Router();
 
 router.get('/', reviewController.reviewList);
 router.post('/', reviewController.reviewStore);
-router.get('/:id', reviewController.reviewListByProperty);
+router.get('property/:id', reviewController.reviewListByProperty);
 
 module.exports = router;
