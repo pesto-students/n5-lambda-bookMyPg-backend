@@ -21,7 +21,7 @@ exports.send = function (email, emailReplacements) {
 
   const htmlToSend = template(replacements);
   return transporter.sendMail({
-    from: constants.SENDER_EMAIL,
+    from: process.env.SENDER_EMAIL,
     to: email,
     subject: emailReplacements.subject,
     html: htmlToSend,

@@ -163,10 +163,19 @@ exports.propertyList = [
         query.exec(function (err, properties) {
           if (err) throw new Error(err);
 
-          const response = properties.length
-            ? apiResponse.successResponseWithData(res, properties)
-            : apiResponse.successResponseWithData(res, []);
-          return response;
+          if (properties.length > 0) {
+            Property.find(filterString)
+              .countDocuments()
+              .then(count => {
+                return apiResponse.successResponseWithData(
+                  res,
+                  properties,
+                  count,
+                );
+              });
+          } else {
+            return apiResponse.successResponseWithData(res, []);
+          }
         });
       });
     } catch (err) {

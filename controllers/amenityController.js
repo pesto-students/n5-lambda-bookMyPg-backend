@@ -64,10 +64,19 @@ exports.amenityList = [
         }
 
         query.exec(function (err, amenities) {
-          const response = amenities.length
-            ? apiResponse.successResponseWithData(res, amenities)
-            : apiResponse.successResponseWithData(res, []);
-          return response;
+          if (amenities.length > 0) {
+            Amenity.find(filterString)
+              .countDocuments()
+              .then(count => {
+                return apiResponse.successResponseWithData(
+                  res,
+                  amenities,
+                  count,
+                );
+              });
+          } else {
+            return apiResponse.successResponseWithData(res, []);
+          }
         });
       });
     } catch (err) {

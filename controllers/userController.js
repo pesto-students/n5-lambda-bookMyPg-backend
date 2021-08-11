@@ -95,12 +95,17 @@ exports.userList = [
         }
 
         // Execute query and return response
-        query.exec(function (err, properties) {
+        query.exec(function (err, users) {
           if (err) throw new Error(err);
-          const response = properties.length
-            ? apiResponse.successResponseWithData(res, properties)
-            : apiResponse.successResponseWithData(res, []);
-          return response;
+          if (users.length > 0) {
+            User.find(filterString)
+              .countDocuments()
+              .then(count => {
+                return apiResponse.successResponseWithData(res, users, count);
+              });
+          } else {
+            return apiResponse.successResponseWithData(res, []);
+          }
         });
       });
     } catch (err) {
