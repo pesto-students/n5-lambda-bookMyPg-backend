@@ -13,7 +13,6 @@ async function filterQuery(data) {
         $options: 'i',
       };
     }
-    filterString['isActive'] = true;
     return filterString;
   } catch (err) {
     throw new Error('Error in query');
@@ -90,7 +89,7 @@ exports.amenityDetail = [
       return apiResponse.validationErrorWithData(res);
     }
     try {
-      Amenity.findOne({ _id: req.params.id, isActive: true }).then(amenity => {
+      Amenity.findOne({ _id: req.params.id }).then(amenity => {
         const response =
           amenity !== null
             ? apiResponse.successResponseWithData(res, amenity)
@@ -176,22 +175,19 @@ exports.amenityDelete = [
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return apiResponse.validationErrorWithData(res, 'Invalid ID');
       } else {
-        Amenity.findOne(
-          { _id: req.params.id, isactive: true },
-          function (err, foundAmenity) {
-            if (foundAmenity === null) {
-              return apiResponse.notFoundResponse(res);
-            } else {
-              // Disable user.
-              Amenity.findByIdAndUpdate(req.params.id, amenity, function (err) {
-                const response = err
-                  ? apiResponse.ErrorResponse(res, err)
-                  : apiResponse.successResponseWithData(res, amenity);
-                return response;
-              });
-            }
-          },
-        );
+        Amenity.findOne({ _id: req.params.id }, function (err, foundAmenity) {
+          if (foundAmenity === null) {
+            return apiResponse.notFoundResponse(res);
+          } else {
+            // Disable user.
+            Amenity.findByIdAndUpdate(req.params.id, amenity, function (err) {
+              const response = err
+                ? apiResponse.ErrorResponse(res, err)
+                : apiResponse.successResponseWithData(res, amenity);
+              return response;
+            });
+          }
+        });
       }
     } catch (err) {
       //throw error in json response with status 500.
@@ -220,26 +216,19 @@ exports.amenityUpdate = [
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
           return apiResponse.validationErrorWithData(res);
         } else {
-          Amenity.findOne(
-            { _id: req.params.id, isactive: true },
-            function (err, foundAmenity) {
-              if (foundAmenity === null) {
-                return apiResponse.notFoundResponse(res);
-              } else {
-                //update complaint.
-                Amenity.findByIdAndUpdate(
-                  req.params.id,
-                  amenity,
-                  function (err) {
-                    const response = err
-                      ? apiResponse.ErrorResponse(res, err)
-                      : apiResponse.successResponseWithData(res, amenity);
-                    return response;
-                  },
-                );
-              }
-            },
-          );
+          Amenity.findOne({ _id: req.params.id }, function (err, foundAmenity) {
+            if (foundAmenity === null) {
+              return apiResponse.notFoundResponse(res);
+            } else {
+              //update complaint.
+              Amenity.findByIdAndUpdate(req.params.id, amenity, function (err) {
+                const response = err
+                  ? apiResponse.ErrorResponse(res, err)
+                  : apiResponse.successResponseWithData(res, amenity);
+                return response;
+              });
+            }
+          });
         }
       }
     } catch (err) {

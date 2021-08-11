@@ -12,16 +12,17 @@ var transporter = nodemailer.createTransport({
 const filePath = path.join(__dirname, '../email-template/template.html');
 const source = fs.readFileSync(filePath, 'utf-8').toString();
 const template = handlebars.compile(source);
+const constants = require('../constants');
 
-exports.send = function (from, to, emailReplacements) {
+exports.send = function (email, emailReplacements) {
   const replacements = {
     notification_text: emailReplacements.notification_text,
   };
 
   const htmlToSend = template(replacements);
   return transporter.sendMail({
-    from: from,
-    to: to,
+    from: constants.SENDER_EMAIL,
+    to: email,
     subject: emailReplacements.subject,
     html: htmlToSend,
   });

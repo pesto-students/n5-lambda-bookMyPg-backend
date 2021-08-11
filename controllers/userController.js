@@ -5,6 +5,7 @@ const apiResponse = require('../helpers/apiResponse');
 var mongoose = require('mongoose');
 mongoose.set('useFindAndModify', false);
 const jwt = require('jsonwebtoken');
+const constants = require('../constants');
 
 async function filterQuery(data) {
   try {
@@ -14,51 +15,28 @@ async function filterQuery(data) {
         filterString['property'] = { $exists: true };
       }
     }
-    if (data.fromdate && data.todate) {
-      filterString['onboardedAt'] = [
-        { $gte: new Date(data.fromdate) },
-        { $lte: new Date(data.todate) },
-      ];
-    } else if (data.fromdate) {
-      filterString['onboardedAt'] = {
-        $gte: new Date(data.fromdate),
-      };
-    } else if (data.todate) {
-      filterString['onboardedAt'] = {
-        $lte: new Date(data.todate),
-      };
+    if (data.fromdate || data.todate) {
+      var dateFilter = {};
+      if (data.fromdate) {
+        dateFilter['$gte'] = new Date(data.fromdate);
+      }
+      if (data.todate) {
+        dateFilter['$lte'] = new Date(data.todate);
+      }
+      filterString['onboardedAt'] = dateFilter;
     }
 
     if (data.search) {
-      let searchString = [];
       searchString = data.search.split(' ');
-      if (searchString.length === 1) {
-        let searchFilter = {};
-        let searchQuery = [];
-        searchFilter['firstName'] = {
-          $regex: '.*' + searchString[0] + '.*',
-          $options: 'i',
-        };
-        searchQuery.push(searchFilter);
-        searchFilter = {};
-        searchFilter['lastName'] = {
-          $regex: '.*' + searchString[0] + '.*',
-          $options: 'i',
-        };
-        searchQuery.push(searchFilter);
-        filterString['$or'] = searchQuery;
-      } else if (searchString[0]) {
-        filterString['firstName'] = {
-          $regex: '.*' + searchString[0] + '.*',
-          $options: 'i',
-        };
-      } else if (searchString[1]) {
-        filterString['lastName'] = {
-          $regex: '.*' + searchString[1] + '.*',
-          $options: 'i',
-        };
-      }
+      filterString['$expr'] = {
+        $regexMatch: {
+          input: { $concat: ['$firstName', ' ', '$lastName'] },
+          regex: '.*' + data.search + '.*',
+          options: 'i',
+        },
+      };
     }
+
     return filterString;
   } catch (err) {
     throw new Error('Error in query');

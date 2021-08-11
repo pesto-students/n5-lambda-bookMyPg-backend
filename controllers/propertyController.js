@@ -5,6 +5,7 @@ const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
 var mongoose = require('mongoose');
+const constants = require('../constants');
 
 async function filterQuery(data) {
   try {
@@ -21,21 +22,13 @@ async function filterQuery(data) {
       let rentFilterList = [];
       let rentFilterString = {};
       rentList.map(rent => {
-        if (rent === 0) {
-          rentFilterString['rent'] = { $lt: 10000, $gte: 0 };
-          rentFilterList.push(rentFilterString);
-          rentFilterString = {};
-        } else if (rent === 1) {
-          rentFilterString['rent'] = { $lt: 15000, $gte: 10000 };
-          rentFilterList.push(rentFilterString);
-          rentFilterString = {};
-        } else {
-          rentFilterString['rent'] = { $gte: 15000 };
-          rentFilterList.push(rentFilterString);
-          rentFilterString = {};
-        }
+        rentFilterString['rent'] = {
+          $lt: constants.RENT_FILTER_CONVENTIONS[rent]['less_than'],
+          $gte: constants.RENT_FILTER_CONVENTIONS[rent]['greater_than'],
+        };
+        rentFilterList.push(rentFilterString);
+        rentFilterString = {};
       });
-
       filterString['$or'] = rentFilterList;
     }
     if (data.search) {
@@ -88,9 +81,9 @@ exports.propertyList = [
           if (filterData.columnname && filterData.orderby) {
             sortFilter[filterData.columnname] = filterData.orderby;
             query = Property.find(filterString)
-              .populate('location', ['name'])
-              .populate('amenities', ['name', 'logo'])
-              .populate('owner', ['firstName', 'lastName'])
+              .populate('location', constants.POPULATE_LOCATION_FIELDS)
+              .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+              .populate('owner', constants.POPULATE_USER_FIELDS)
               .populate('numreviews')
               .sort(sortFilter)
               .skip(
@@ -99,9 +92,9 @@ exports.propertyList = [
               .limit(parseInt(filterData.countperpage));
           } else {
             query = Property.find(filterString)
-              .populate('location', ['name'])
-              .populate('amenities', ['name', 'logo'])
-              .populate('owner', ['firstName', 'lastName'])
+              .populate('location', constants.POPULATE_LOCATION_FIELDS)
+              .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+              .populate('owner', constants.POPULATE_USER_FIELDS)
               .populate('numreviews')
               .skip(
                 (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
@@ -111,16 +104,16 @@ exports.propertyList = [
         } else if (filterData.columnname && filterData.orderby) {
           sortFilter[filterData.columnname] = filterData.orderby;
           query = Property.find(filterString)
-            .populate('location', ['name'])
-            .populate('amenities', ['name', 'logo'])
-            .populate('owner', ['firstName', 'lastName'])
+            .populate('location', constants.POPULATE_LOCATION_FIELDS)
+            .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+            .populate('owner', constants.POPULATE_USER_FIELDS)
             .populate('numreviews')
             .sort(sortFilter);
         } else {
           query = Property.find(filterString)
-            .populate('location', ['name'])
-            .populate('amenities', ['name', 'logo'])
-            .populate('owner', ['firstName', 'lastName'])
+            .populate('location', constants.POPULATE_LOCATION_FIELDS)
+            .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+            .populate('owner', constants.POPULATE_USER_FIELDS)
             .populate('numreviews');
         }
 
@@ -154,9 +147,9 @@ exports.propertyDetail = [
     }
     try {
       Property.findOne({ _id: req.params.id })
-        .populate('location', ['name'])
-        .populate('amenities', ['name', 'logo'])
-        .populate('owner', ['firstName', 'lastName'])
+        .populate('location', constants.POPULATE_LOCATION_FIELDS)
+        .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+        .populate('owner', constants.POPULATE_USER_FIELDS)
         .populate('numreviews')
         .then(property => {
           const response =

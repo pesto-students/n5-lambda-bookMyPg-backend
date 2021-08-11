@@ -5,9 +5,10 @@ const templateText = require('../helpers/templateText');
 var mongoose = require('mongoose');
 mongoose.set('useFindAndModify', false);
 const mailer = require('../helpers/mailer');
+const constants = require('../constants');
 
 /**
- * Amenity store.
+ * Email send.
  *
  * @param {string}      email
  * @param {string}      type
@@ -28,20 +29,12 @@ exports.emailSend = [
   sanitizeBody('type').escape(),
   (req, res) => {
     try {
-      console.log(req.body);
       let emailReplacements = {};
-      if (req.body.type === 'Visit') {
-        emailReplacements = templateText.visitTemplate(req.body);
-      } else if (req.body.type === 'Userrating') {
-        emailReplacements = templateText.userratingTemplate(req.body);
-      } else if (req.body.type === 'Propertyrating') {
-        console.log('here');
-        emailReplacements = templateText.propertyratingTemplate(req.body);
-        console.log(emailReplacements);
-      } else if (req.body.type === 'Query') {
-        emailReplacements = templateText.queryTemplate(req.body);
-      }
-      mailer.send(req.body.from, req.body.to, emailReplacements);
+      emailReplacements = templateText[
+        constants.EMAIL_TEMPLATE_TEXT[req.body.type]
+      ](req.body);
+
+      mailer.send(req.body.email, emailReplacements);
       return apiResponse.successResponseWithData(
         res,
         'Email Send Success.',
