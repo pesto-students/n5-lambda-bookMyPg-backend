@@ -34,7 +34,7 @@ exports.emailSend = [
         constants.EMAIL_TEMPLATE_TEXT[req.body.type]
       ](req.body);
 
-      mailer.send(req.body.email, emailReplacements);
+      mailer.send(req.body.useremail, req.body.owneremail, emailReplacements);
       return apiResponse.successResponseWithData(
         res,
         'Email Send Success.',

@@ -14,7 +14,7 @@ const source = fs.readFileSync(filePath, 'utf-8').toString();
 const template = handlebars.compile(source);
 const constants = require('../constants');
 
-exports.send = function (email, emailReplacements) {
+exports.send = function (useremail, owneremail, emailReplacements) {
   const replacements = {
     notification_text: emailReplacements.notification_text,
   };
@@ -22,7 +22,8 @@ exports.send = function (email, emailReplacements) {
   const htmlToSend = template(replacements);
   return transporter.sendMail({
     from: process.env.SENDER_EMAIL,
-    to: email,
+    to: useremail,
+    cc: owneremail,
     subject: emailReplacements.subject,
     html: htmlToSend,
   });
