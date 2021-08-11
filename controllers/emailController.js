@@ -1,12 +1,14 @@
 const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
+const templateText = require('../helpers/templateText');
 var mongoose = require('mongoose');
 mongoose.set('useFindAndModify', false);
 const mailer = require('../helpers/mailer');
+const constants = require('../constants');
 
 /**
- * Amenity store.
+ * Email send.
  *
  * @param {string}      email
  * @param {string}      type
@@ -19,22 +21,20 @@ exports.emailSend = [
     .isLength({ min: 1 })
     .trim()
     .withMessage('Email must be specified.'),
+  body('type')
+    .isLength({ min: 1 })
+    .trim()
+    .withMessage('Type must be specified.'),
   sanitizeBody('email').escape(),
-  //sanitizeBody('logo').escape(),
-  // Process request after validation and sanitization.
+  sanitizeBody('type').escape(),
   (req, res) => {
     try {
-      // Html email body
-      let html = '<p>Please Confirm your Account.</p><p>OTP';
-      console.log(html);
-      // Send confirmation email
-      mailer.send(
-        'monalidoshi9@gmail.com',
-        'monalidoshi9@gmail.com',
-        'Confirm Account',
-        html,
-      );
+      let emailReplacements = {};
+      emailReplacements = templateText[
+        constants.EMAIL_TEMPLATE_TEXT[req.body.type]
+      ](req.body);
 
+      mailer.send(req.body.email, emailReplacements);
       return apiResponse.successResponseWithData(
         res,
         'Email Send Success.',
