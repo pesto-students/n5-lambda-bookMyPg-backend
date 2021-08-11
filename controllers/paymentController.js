@@ -32,3 +32,69 @@ exports.paymentStore = [
     }
   },
 ];
+
+/**
+ * Payment List.
+ *
+ * @returns {Object}
+ */
+exports.paymentList = [
+  async function (req, res) {
+    try {
+      var filterData = req.query;
+      if (filterData.orderby) {
+        if (filterData.orderby == 'dsc') {
+          filterData['orderby'] = -1;
+        } else {
+          filterData['orderby'] = 1;
+        }
+      }
+      await filterQuery(req.query).then(filterString => {
+        let sortFilter = {};
+        var query = '';
+        // Based on query string parameters format query
+        if (filterData.pagenumber && filterData.countperpage) {
+          if (filterData.columnname && filterData.orderby) {
+            sortFilter[filterData.columnname] = filterData.orderby;
+            query = Payment.find(filterString)
+              .sort(sortFilter)
+              .skip(
+                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
+              )
+              .limit(parseInt(filterData.countperpage));
+          } else {
+            query = Payment.find(filterString)
+              .sort(sortFilter)
+              .skip(
+                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
+              )
+              .limit(parseInt(filterData.countperpage));
+          }
+        } else if (filterData.columnname && filterData.orderby) {
+          sortFilter[filterData.columnname] = filterData.orderby;
+          query = Payment.find(filterString).sort(sortFilter);
+        } else {
+          query = Payment.find(filterString);
+        }
+
+        query.exec(function (err, payments) {
+          if (payments.length > 0) {
+            Payment.find(filterString)
+              .countDocuments()
+              .then(count => {
+                return apiResponse.successResponseWithData(
+                  res,
+                  payments,
+                  count,
+                );
+              });
+          } else {
+            return apiResponse.successResponseWithData(res, []);
+          }
+        });
+      });
+    } catch (err) {
+      return apiResponse.ErrorResponse(res, err);
+    }
+  },
+];

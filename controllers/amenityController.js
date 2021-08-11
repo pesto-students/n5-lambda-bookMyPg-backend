@@ -41,7 +41,7 @@ exports.amenityList = [
         // Based on query string parameters format query
         if (filterData.pagenumber && filterData.countperpage) {
           if (filterData.columnname && filterData.orderby) {
-            sortFilter['createdAt'] = filterData.orderby;
+            sortFilter[filterData.columnname] = filterData.orderby;
             query = Amenity.find(filterString)
               .sort(sortFilter)
               .skip(
@@ -57,7 +57,7 @@ exports.amenityList = [
               .limit(parseInt(filterData.countperpage));
           }
         } else if (filterData.columnname && filterData.orderby) {
-          sortFilter['createdAt'] = filterData.orderby;
+          sortFilter[filterData.columnname] = filterData.orderby;
           query = Amenity.find(filterString).sort(sortFilter);
         } else {
           query = Amenity.find(filterString);

@@ -8,10 +8,14 @@ var mongoose = require('mongoose');
 const constants = require('../constants');
 const ObjectId = mongoose.Types.ObjectId;
 
-async function filterQuery(data) {
+async function filterQuery(data, type, user_id) {
   try {
     var filterString = {};
     let res = '';
+
+    if (type == 'owner') {
+      filterString['owner'] = user_id;
+    }
 
     // Filter based on Gender
     if (data.gender) {
@@ -63,7 +67,7 @@ async function getReviewAnalysis(property_id) {
     // Get reviews
     reviews = await Review.find({
       property: property_id,
-    });
+    }).populate('reviewedby', constants.POPULATE_USER_FIELDS);
 
     // Find review analysis
     if (reviews) {
@@ -288,6 +292,89 @@ exports.propertyStore = [
           return response;
         });
       }
+    } catch (err) {
+      // Throw error in json response with status 500.
+      return apiResponse.ErrorResponse(res, err);
+    }
+  },
+];
+
+/**
+ * Property List By Owner.
+ *
+ * @returns {Object}
+ */
+exports.propertyListByOwner = [
+  async function (req, res) {
+    try {
+      var filterData = req.query;
+      if (filterData.orderby) {
+        if (filterData.orderby == 'dsc') {
+          filterData['orderby'] = -1;
+        } else {
+          filterData['orderby'] = 1;
+        }
+      }
+
+      await filterQuery(req.query, 'owner', req.params.id).then(
+        filterString => {
+          let sortFilter = {};
+          var query = '';
+          // Based on query string parameters format query
+          if (filterData.pagenumber && filterData.countperpage) {
+            if (filterData.columnname && filterData.orderby) {
+              sortFilter[filterData.columnname] = filterData.orderby;
+              query = Property.find(filterString, 'owner')
+                .populate('location', constants.POPULATE_LOCATION_FIELDS)
+                .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+                .sort(sortFilter)
+                .skip(
+                  (filterData.pagenumber - 1) *
+                    parseInt(filterData.countperpage),
+                )
+                .limit(parseInt(filterData.countperpage));
+            } else {
+              query = Property.find(filterString)
+                .populate('location', constants.POPULATE_LOCATION_FIELDS)
+                .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+                .skip(
+                  (filterData.pagenumber - 1) *
+                    parseInt(filterData.countperpage),
+                )
+                .limit(parseInt(filterData.countperpage));
+            }
+          } else if (filterData.columnname && filterData.orderby) {
+            sortFilter[filterData.columnname] = filterData.orderby;
+            query = Property.find(filterString)
+              .populate('location', constants.POPULATE_LOCATION_FIELDS)
+              .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+              .sort(sortFilter);
+          } else {
+            query = Property.find(filterString)
+              .populate('location', constants.POPULATE_LOCATION_FIELDS)
+              .populate('amenities', constants.POPULATE_AMENITY_FIELDS);
+          }
+
+          // Execute query and return response
+          query.exec(function (err, properties) {
+            if (err) throw new Error(err);
+
+            if (properties.length > 0) {
+              Property.find(filterString)
+                .countDocuments()
+                .then(count => {
+                  return apiResponse.successResponseWithData(
+                    res,
+                    properties,
+                    count,
+                  );
+                });
+            } else {
+              return apiResponse.successResponseWithData(res, []);
+            }
+          });
+        },
+      );
     } catch (err) {
       // Throw error in json response with status 500.
       return apiResponse.ErrorResponse(res, err);

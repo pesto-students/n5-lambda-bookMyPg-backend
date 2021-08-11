@@ -1,4 +1,5 @@
 const User = require('../models/userModel');
+const Property = require('../models/propertyModel');
 const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
@@ -6,12 +7,19 @@ var mongoose = require('mongoose');
 mongoose.set('useFindAndModify', false);
 const jwt = require('jsonwebtoken');
 
-async function filterQuery(data) {
+async function filterQuery(data, type, user_id) {
   try {
     var filterString = {};
-    if (data.type) {
+    /*if (data.type) {
       if (data.type === 'tenant') {
         filterString['property'] = { $exists: true };
+      }
+    }*/
+    if (type == 'owner') {
+      res = await Property.find({ owner: user_id }, { _id: 1 });
+
+      if (res) {
+        filterString['property'] = { $in: res };
       }
     }
     if (data.from_date || data.to_date) {
@@ -22,7 +30,7 @@ async function filterQuery(data) {
       if (data.to_date) {
         dateFilter['$lte'] = new Date(data.to_date);
       }
-      data.type === 'tenant'
+      type === 'owner'
         ? (filterString['onboardedAt'] = dateFilter)
         : (filterString['createdAt'] = dateFilter);
     }
@@ -37,7 +45,6 @@ async function filterQuery(data) {
         },
       };
     }
-
     return filterString;
   } catch (err) {
     throw new Error('Error in query');
@@ -67,7 +74,7 @@ exports.userList = [
         // Based on query string parameters format query
         if (filterData.pagenumber && filterData.countperpage) {
           if (filterData.columnname && filterData.orderby) {
-            sortFilter['onboardedAt'] = filterData.orderby;
+            sortFilter[filterData.columnname] = filterData.orderby;
             query = User.find(filterString)
               .populate('property', ['name'])
               .sort(sortFilter)
@@ -338,6 +345,80 @@ exports.userUpdate = [
       }
     } catch (err) {
       //throw error in json response with status 500.
+      return apiResponse.ErrorResponse(res, err);
+    }
+  },
+];
+
+/**
+ * User List By Owner.
+ *
+ * @returns {Object}
+ */
+exports.userListByOwner = [
+  async function (req, res) {
+    try {
+      var filterData = req.query;
+      if (filterData.orderby) {
+        if (filterData.orderby == 'dsc') {
+          filterData['orderby'] = -1;
+        } else {
+          filterData['orderby'] = 1;
+        }
+      }
+
+      await filterQuery(req.query, 'owner', req.params.id).then(
+        filterString => {
+          let sortFilter = {};
+          var query = '';
+          // Based on query string parameters format query
+          if (filterData.pagenumber && filterData.countperpage) {
+            if (filterData.columnname && filterData.orderby) {
+              sortFilter[filterData.columnname] = filterData.orderby;
+              query = User.find(filterString)
+                .populate('property', ['name'])
+                .sort(sortFilter)
+                .skip(
+                  (filterData.pagenumber - 1) *
+                    parseInt(filterData.countperpage),
+                )
+                .limit(parseInt(filterData.countperpage));
+            } else {
+              query = User.find(filterString)
+                .populate('property', ['name'])
+                .sort(sortFilter)
+                .skip(
+                  (filterData.pagenumber - 1) *
+                    parseInt(filterData.countperpage),
+                )
+                .limit(parseInt(filterData.countperpage));
+            }
+          } else if (filterData.columnname && filterData.orderby) {
+            sortFilter['onboardedAt'] = filterData.orderby;
+            query = User.find(filterString)
+              .populate('property', ['name'])
+              .sort(sortFilter);
+          } else {
+            query = User.find(filterString).populate('property', ['name']);
+          }
+
+          // Execute query and return response
+          query.exec(function (err, users) {
+            if (err) throw new Error(err);
+            if (users.length > 0) {
+              User.find(filterString)
+                .countDocuments()
+                .then(count => {
+                  return apiResponse.successResponseWithData(res, users, count);
+                });
+            } else {
+              return apiResponse.successResponseWithData(res, []);
+            }
+          });
+        },
+      );
+    } catch (err) {
+      // Throw error in json response with status 500.
       return apiResponse.ErrorResponse(res, err);
     }
   },
