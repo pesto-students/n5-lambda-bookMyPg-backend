@@ -5,7 +5,6 @@ const apiResponse = require('../helpers/apiResponse');
 var mongoose = require('mongoose');
 mongoose.set('useFindAndModify', false);
 const jwt = require('jsonwebtoken');
-const constants = require('../constants');
 
 async function filterQuery(data) {
   try {
@@ -15,13 +14,13 @@ async function filterQuery(data) {
         filterString['property'] = { $exists: true };
       }
     }
-    if (data.fromdate || data.todate) {
+    if (data.from_date || data.to_date) {
       var dateFilter = {};
-      if (data.fromdate) {
-        dateFilter['$gte'] = new Date(data.fromdate);
+      if (data.from_date) {
+        dateFilter['$gte'] = new Date(data.from_date);
       }
-      if (data.todate) {
-        dateFilter['$lte'] = new Date(data.todate);
+      if (data.to_date) {
+        dateFilter['$lte'] = new Date(data.to_date);
       }
       data.type === 'tenant'
         ? (filterString['onboardedAt'] = dateFilter)
@@ -29,7 +28,7 @@ async function filterQuery(data) {
     }
 
     if (data.search) {
-      searchString = data.search.split(' ');
+      // searchString = data.search.split(' ');
       filterString['$expr'] = {
         $regexMatch: {
           input: { $concat: ['$firstName', ' ', '$lastName'] },
