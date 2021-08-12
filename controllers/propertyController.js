@@ -4,16 +4,17 @@ const Review = require('../models/reviewModel');
 const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
-var mongoose = require('mongoose');
 const constants = require('../constants');
+const setParams = require('../helpers/utility');
+var mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
 
-async function filterQuery(data, type, user_id) {
+async function setFilterQuery(data, user_id) {
   try {
     var filterString = {};
     let res = '';
 
-    if (type == 'owner') {
+    if (user_id != '') {
       filterString['owner'] = user_id;
     }
 
@@ -56,6 +57,7 @@ async function filterQuery(data, type, user_id) {
         filterString['_id'] = { $in: res };
       }
     }
+
     return filterString;
   } catch (err) {
     throw new Error('Error in query');
@@ -111,57 +113,21 @@ exports.propertyList = [
   async function (req, res) {
     try {
       var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
 
-      await filterQuery(req.query).then(filterString => {
-        let sortFilter = {};
-        var query = '';
-        // Based on query string parameters format query
-        if (filterData.pagenumber && filterData.countperpage) {
-          if (filterData.columnname && filterData.orderby) {
-            sortFilter[filterData.columnname] = filterData.orderby;
-            query = Property.find(filterString)
-              .populate('location', constants.POPULATE_LOCATION_FIELDS)
-              .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-              .populate('owner', constants.POPULATE_USER_FIELDS)
-              .populate('numreviews')
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          } else {
-            query = Property.find(filterString)
-              .populate('location', constants.POPULATE_LOCATION_FIELDS)
-              .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-              .populate('owner', constants.POPULATE_USER_FIELDS)
-              .populate('numreviews')
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          }
-        } else if (filterData.columnname && filterData.orderby) {
-          sortFilter[filterData.columnname] = filterData.orderby;
-          query = Property.find(filterString)
-            .populate('location', constants.POPULATE_LOCATION_FIELDS)
-            .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-            .populate('owner', constants.POPULATE_USER_FIELDS)
-            .populate('numreviews')
-            .sort(sortFilter);
-        } else {
-          query = Property.find(filterString)
-            .populate('location', constants.POPULATE_LOCATION_FIELDS)
-            .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-            .populate('owner', constants.POPULATE_USER_FIELDS)
-            .populate('numreviews');
-        }
+      //Check if request from Owner
+      var user_id = req.route.path.includes('owner') ? req.params.id : '';
+
+      await setFilterQuery(req.query, user_id).then(filterString => {
+        queryParams = setParams.setSortSkipParams(filterData);
+        // Format query based on pagination and sorting parameters
+        var query = Property.find(filterString)
+          .populate('location', constants.POPULATE_LOCATION_FIELDS)
+          .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+          .populate('owner', constants.POPULATE_USER_FIELDS)
+          .populate('numreviews')
+          .sort(queryParams.sortFilter)
+          .skip(queryParams.skip)
+          .limit(parseInt(queryParams.limit));
 
         // Execute query and return response
         query.exec(function (err, properties) {
@@ -292,89 +258,6 @@ exports.propertyStore = [
           return response;
         });
       }
-    } catch (err) {
-      // Throw error in json response with status 500.
-      return apiResponse.ErrorResponse(res, err);
-    }
-  },
-];
-
-/**
- * Property List By Owner.
- *
- * @returns {Object}
- */
-exports.propertyListByOwner = [
-  async function (req, res) {
-    try {
-      var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
-
-      await filterQuery(req.query, 'owner', req.params.id).then(
-        filterString => {
-          let sortFilter = {};
-          var query = '';
-          // Based on query string parameters format query
-          if (filterData.pagenumber && filterData.countperpage) {
-            if (filterData.columnname && filterData.orderby) {
-              sortFilter[filterData.columnname] = filterData.orderby;
-              query = Property.find(filterString, 'owner')
-                .populate('location', constants.POPULATE_LOCATION_FIELDS)
-                .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-                .sort(sortFilter)
-                .skip(
-                  (filterData.pagenumber - 1) *
-                    parseInt(filterData.countperpage),
-                )
-                .limit(parseInt(filterData.countperpage));
-            } else {
-              query = Property.find(filterString)
-                .populate('location', constants.POPULATE_LOCATION_FIELDS)
-                .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-                .skip(
-                  (filterData.pagenumber - 1) *
-                    parseInt(filterData.countperpage),
-                )
-                .limit(parseInt(filterData.countperpage));
-            }
-          } else if (filterData.columnname && filterData.orderby) {
-            sortFilter[filterData.columnname] = filterData.orderby;
-            query = Property.find(filterString)
-              .populate('location', constants.POPULATE_LOCATION_FIELDS)
-              .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-              .sort(sortFilter);
-          } else {
-            query = Property.find(filterString)
-              .populate('location', constants.POPULATE_LOCATION_FIELDS)
-              .populate('amenities', constants.POPULATE_AMENITY_FIELDS);
-          }
-
-          // Execute query and return response
-          query.exec(function (err, properties) {
-            if (err) throw new Error(err);
-
-            if (properties.length > 0) {
-              Property.find(filterString)
-                .countDocuments()
-                .then(count => {
-                  return apiResponse.successResponseWithData(
-                    res,
-                    properties,
-                    count,
-                  );
-                });
-            } else {
-              return apiResponse.successResponseWithData(res, []);
-            }
-          });
-        },
-      );
     } catch (err) {
       // Throw error in json response with status 500.
       return apiResponse.ErrorResponse(res, err);

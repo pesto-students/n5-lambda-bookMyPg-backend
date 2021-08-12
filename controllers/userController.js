@@ -6,22 +6,19 @@ const apiResponse = require('../helpers/apiResponse');
 var mongoose = require('mongoose');
 mongoose.set('useFindAndModify', false);
 const jwt = require('jsonwebtoken');
+const constants = require('../constants');
+const setParams = require('../helpers/utility');
 
-async function filterQuery(data, type, user_id) {
+async function setFilterQuery(data, user_id) {
   try {
     var filterString = {};
-    /*if (data.type) {
-      if (data.type === 'tenant') {
-        filterString['property'] = { $exists: true };
-      }
-    }*/
-    if (type == 'owner') {
+    if (user_id != '') {
       res = await Property.find({ owner: user_id }, { _id: 1 });
-
       if (res) {
         filterString['property'] = { $in: res };
       }
     }
+
     if (data.from_date || data.to_date) {
       var dateFilter = {};
       if (data.from_date) {
@@ -60,45 +57,17 @@ exports.userList = [
   async function (req, res) {
     try {
       var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
+      //Check if request from Owner
+      var user_id = req.route.path.includes('owner') ? req.params.id : '';
 
-      await filterQuery(req.query).then(filterString => {
-        let sortFilter = {};
-        var query = '';
-        // Based on query string parameters format query
-        if (filterData.pagenumber && filterData.countperpage) {
-          if (filterData.columnname && filterData.orderby) {
-            sortFilter[filterData.columnname] = filterData.orderby;
-            query = User.find(filterString)
-              .populate('property', ['name'])
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          } else {
-            query = User.find(filterString)
-              .populate('property', ['name'])
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          }
-        } else if (filterData.columnname && filterData.orderby) {
-          sortFilter['onboardedAt'] = filterData.orderby;
-          query = User.find(filterString)
-            .populate('property', ['name'])
-            .sort(sortFilter);
-        } else {
-          query = User.find(filterString).populate('property', ['name']);
-        }
+      await setFilterQuery(req.query, user_id).then(filterString => {
+        queryParams = setParams.setSortSkipParams(filterData);
+        // Format query based on pagination and sorting parameters
+        var query = Property.find(filterString)
+          .populate('property', constants.POPULATE_PROPERTY_FIELDS)
+          .sort(queryParams.sortFilter)
+          .skip(queryParams.skip)
+          .limit(parseInt(queryParams.limit));
 
         // Execute query and return response
         query.exec(function (err, users) {
@@ -135,7 +104,7 @@ exports.userDetail = [
     }
     try {
       User.findOne({ _id: req.params.id })
-        .populate('property', ['name'])
+        .populate('property', constants.POPULATE_PROPERTY_FIELDS)
         .then(user => {
           const response =
             user !== null
@@ -345,80 +314,6 @@ exports.userUpdate = [
       }
     } catch (err) {
       //throw error in json response with status 500.
-      return apiResponse.ErrorResponse(res, err);
-    }
-  },
-];
-
-/**
- * User List By Owner.
- *
- * @returns {Object}
- */
-exports.userListByOwner = [
-  async function (req, res) {
-    try {
-      var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
-
-      await filterQuery(req.query, 'owner', req.params.id).then(
-        filterString => {
-          let sortFilter = {};
-          var query = '';
-          // Based on query string parameters format query
-          if (filterData.pagenumber && filterData.countperpage) {
-            if (filterData.columnname && filterData.orderby) {
-              sortFilter[filterData.columnname] = filterData.orderby;
-              query = User.find(filterString)
-                .populate('property', ['name'])
-                .sort(sortFilter)
-                .skip(
-                  (filterData.pagenumber - 1) *
-                    parseInt(filterData.countperpage),
-                )
-                .limit(parseInt(filterData.countperpage));
-            } else {
-              query = User.find(filterString)
-                .populate('property', ['name'])
-                .sort(sortFilter)
-                .skip(
-                  (filterData.pagenumber - 1) *
-                    parseInt(filterData.countperpage),
-                )
-                .limit(parseInt(filterData.countperpage));
-            }
-          } else if (filterData.columnname && filterData.orderby) {
-            sortFilter['onboardedAt'] = filterData.orderby;
-            query = User.find(filterString)
-              .populate('property', ['name'])
-              .sort(sortFilter);
-          } else {
-            query = User.find(filterString).populate('property', ['name']);
-          }
-
-          // Execute query and return response
-          query.exec(function (err, users) {
-            if (err) throw new Error(err);
-            if (users.length > 0) {
-              User.find(filterString)
-                .countDocuments()
-                .then(count => {
-                  return apiResponse.successResponseWithData(res, users, count);
-                });
-            } else {
-              return apiResponse.successResponseWithData(res, []);
-            }
-          });
-        },
-      );
-    } catch (err) {
-      // Throw error in json response with status 500.
       return apiResponse.ErrorResponse(res, err);
     }
   },

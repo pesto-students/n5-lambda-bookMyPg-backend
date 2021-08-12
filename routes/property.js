@@ -6,7 +6,7 @@ const role = require('../helpers/roles');
 var router = express.Router();
 
 router.get('/', propertyController.propertyList);
-router.get('/owner/:id', propertyController.propertyListByOwner);
+router.get('/owner/:id', propertyController.propertyList);
 router.get('/', propertyController.propertyList);
 router.get('/:id', propertyController.propertyDetail);
 router.post(

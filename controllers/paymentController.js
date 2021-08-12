@@ -1,5 +1,43 @@
-const Transaction = require('../models/paymentModel');
+const Payment = require('../models/paymentModel');
 const apiResponse = require('../helpers/apiResponse');
+const setParams = require('../helpers/utility');
+const constants = require('../constants');
+
+async function setFilterQuery(data, type, user_id) {
+  try {
+    var filterString = {};
+
+    if (data.from_date || data.to_date) {
+      var dateFilter = {};
+      if (data.from_date) {
+        dateFilter['$gte'] = new Date(data.from_date);
+      }
+      if (data.to_date) {
+        dateFilter['$lte'] = new Date(data.to_date);
+      }
+      filterString['createdAt'] = dateFilter;
+    }
+
+    if (data.search) {
+      var res = await Property.find(
+        {
+          name: {
+            $regex: '.*' + data.search + '.*',
+            $options: 'i',
+          },
+        },
+        { _id: 1 },
+      );
+
+      if (res) {
+        filterString['property'] = { $in: res };
+      }
+    }
+    return filterString;
+  } catch (err) {
+    throw new Error('Error in query');
+  }
+}
 
 /**
  * Payment store.
@@ -42,41 +80,18 @@ exports.paymentList = [
   async function (req, res) {
     try {
       var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
-      await filterQuery(req.query).then(filterString => {
-        let sortFilter = {};
-        var query = '';
-        // Based on query string parameters format query
-        if (filterData.pagenumber && filterData.countperpage) {
-          if (filterData.columnname && filterData.orderby) {
-            sortFilter[filterData.columnname] = filterData.orderby;
-            query = Payment.find(filterString)
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          } else {
-            query = Payment.find(filterString)
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          }
-        } else if (filterData.columnname && filterData.orderby) {
-          sortFilter[filterData.columnname] = filterData.orderby;
-          query = Payment.find(filterString).sort(sortFilter);
-        } else {
-          query = Payment.find(filterString);
-        }
 
+      await setFilterQuery(req.query).then(filterString => {
+        queryParams = setParams.setSortSkipParams(filterData);
+        // Format query based on pagination and sorting parameters
+        var query = Payment.find(filterString)
+          .populate('property', constants.POPULATE_PROPERTY_FIELDS)
+          .populate('raisedby', constants.POPULATE_USER_FIELDS)
+          .sort(queryParams.sortFilter)
+          .skip(queryParams.skip)
+          .limit(parseInt(queryParams.limit));
+
+        // Execute query and return response
         query.exec(function (err, payments) {
           if (payments.length > 0) {
             Payment.find(filterString)

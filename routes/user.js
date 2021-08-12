@@ -8,7 +8,7 @@ var router = express.Router();
 router.get('/', userController.userList);
 router.get('/:id', userController.userDetail);
 router.get('/user/:email', userController.userDetailbyEmail);
-router.get('/owner/:id', userController.userListByOwner);
+router.get('/owner/:id', userController.userList);
 router.post('/', userController.userStore);
 router.delete(
   '/:id',
