@@ -3,8 +3,9 @@ const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
 var mongoose = require('mongoose');
+const setParams = require('../helpers/utility');
 
-async function filterQuery(data) {
+async function setFilterQuery(data) {
   try {
     var filterString = {};
     if (data.search) {
@@ -28,46 +29,31 @@ exports.amenityList = [
   async function (req, res) {
     try {
       var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
-      await filterQuery(req.query).then(filterString => {
-        let sortFilter = {};
-        var query = '';
-        // Based on query string parameters format query
-        if (filterData.pagenumber && filterData.countperpage) {
-          if (filterData.columnname && filterData.orderby) {
-            sortFilter['createdAt'] = filterData.orderby;
-            query = Amenity.find(filterString)
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          } else {
-            query = Amenity.find(filterString)
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          }
-        } else if (filterData.columnname && filterData.orderby) {
-          sortFilter['createdAt'] = filterData.orderby;
-          query = Amenity.find(filterString).sort(sortFilter);
-        } else {
-          query = Amenity.find(filterString);
-        }
 
+      await setFilterQuery(req.query).then(filterString => {
+        queryParams = setParams.setSortSkipParams(filterData);
+
+        // Format query based on pagination and sorting parameters
+        var query = Amenity.find(filterString)
+          .sort(queryParams.sortFilter)
+          .skip(queryParams.skip)
+          .limit(parseInt(queryParams.limit));
+
+        // Execute query and return response
         query.exec(function (err, amenities) {
-          const response = amenities.length
-            ? apiResponse.successResponseWithData(res, amenities)
-            : apiResponse.successResponseWithData(res, []);
-          return response;
+          if (amenities.length > 0) {
+            Amenity.find(filterString)
+              .countDocuments()
+              .then(count => {
+                return apiResponse.successResponseWithData(
+                  res,
+                  amenities,
+                  count,
+                );
+              });
+          } else {
+            return apiResponse.successResponseWithData(res, []);
+          }
         });
       });
     } catch (err) {

@@ -4,18 +4,29 @@ const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
 var mongoose = require('mongoose');
+const setParams = require('../helpers/utility');
+const constants = require('../constants');
 
-async function filterQuery(data) {
+async function setFilterQuery(data, user_id) {
   try {
     var filterString = {};
     let res = '';
-    if (data.fromdate || data.todate) {
-      var dateFilter = {};
-      if (data.fromdate) {
-        dateFilter['$gte'] = new Date(data.fromdate);
+
+    if (user_id != '') {
+      res = await Property.find({ owner: user_id }, { _id: 1 });
+
+      if (res) {
+        filterString['property'] = { $in: res };
       }
-      if (data.todate) {
-        dateFilter['$lte'] = new Date(data.todate);
+    }
+
+    if (data.from_date || data.to_date) {
+      var dateFilter = {};
+      if (data.from_date) {
+        dateFilter['$gte'] = new Date(data.from_date);
+      }
+      if (data.to_date) {
+        dateFilter['$lte'] = new Date(data.to_date);
       }
       filterString['createdAt'] = dateFilter;
     }
@@ -42,7 +53,7 @@ async function filterQuery(data) {
 }
 
 /**
- * Complaint List.
+ * Complaint List By Owner.
  *
  * @returns {Object}
  */
@@ -50,58 +61,37 @@ exports.complaintList = [
   async function (req, res) {
     try {
       var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
 
-      await filterQuery(req.query).then(filterString => {
-        let sortFilter = {};
-        var query = '';
-        // Based on query string parameters format query
-        if (filterData.pagenumber && filterData.countperpage) {
-          if (filterData.columnname && filterData.orderby) {
-            sortFilter['createdAt'] = filterData.orderby;
-            query = Complaint.find(filterString)
-              .populate('property', ['name'])
-              .populate('raisedby', ['firstName', 'lastName', 'email', 'phone'])
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          } else {
-            query = Complaint.find(filterString)
-              .populate('property', ['name'])
-              .populate('raisedby', ['firstName', 'lastName', 'email', 'phone'])
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          }
-        } else if (filterData.columnname && filterData.orderby) {
-          sortFilter['createdAt'] = filterData.orderby;
-          query = Complaint.find(filterString)
-            .populate('property', ['name'])
-            .populate('raisedby', ['firstName', 'lastName', 'email', 'phone'])
-            .sort(sortFilter);
-        } else {
-          query = Complaint.find(filterString)
-            .populate('property', ['name'])
-            .populate('raisedby', ['firstName', 'lastName', 'email', 'phone']);
-        }
+      //Check if request from Owner
+      var user_id = req.route.path.includes('owner') ? req.params.id : '';
+      await setFilterQuery(req.query, user_id).then(filterString => {
+        queryParams = setParams.setSortSkipParams(filterData);
+
+        // Format query based on pagination and sorting parameters
+        var query = Complaint.find(filterString)
+          .populate('property', constants.POPULATE_PROPERTY_FIELDS)
+          .populate('raisedby', constants.POPULATE_USER_FIELDS)
+          .sort(queryParams.sortFilter)
+          .skip(queryParams.skip)
+          .limit(parseInt(queryParams.limit));
 
         // Execute query and return response
         query.exec(function (err, complaints) {
           if (err) throw new Error(err);
-          const response = complaints.length
-            ? apiResponse.successResponseWithData(res, complaints)
-            : apiResponse.successResponseWithData(res, []);
-          return response;
+
+          if (complaints.length > 0) {
+            Complaint.find(filterString)
+              .countDocuments()
+              .then(count => {
+                return apiResponse.successResponseWithData(
+                  res,
+                  complaints,
+                  count,
+                );
+              });
+          } else {
+            return apiResponse.successResponseWithData(res, []);
+          }
         });
       });
     } catch (err) {
@@ -125,8 +115,8 @@ exports.complaintDetail = [
     }
     try {
       Complaint.findOne({ _id: req.params.id })
-        .populate('property', ['name'])
-        .populate('raisedby', ['firstName', 'lastName', 'email', 'phone'])
+        .populate('property', constants.POPULATE_PROPERTY_FIELDS)
+        .populate('raisedby', constants.POPULATE_USER_FIELDS)
         .then(complaint => {
           const response =
             complaint !== null

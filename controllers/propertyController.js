@@ -4,26 +4,33 @@ const Review = require('../models/reviewModel');
 const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
-var mongoose = require('mongoose');
 const constants = require('../constants');
+const setParams = require('../helpers/utility');
+var mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
 
-async function filterQuery(data) {
+async function setFilterQuery(data, user_id) {
   try {
     var filterString = {};
     let res = '';
 
-    if (data.gender) {
-      let genderList = data.gender.split(',');
-
-      filterString['gender'] = { $in: genderList };
+    if (user_id != '') {
+      filterString['owner'] = user_id;
     }
+
+    // Filter based on Gender
+    if (data.gender) {
+      filterString['gender'] = { $in: data.gender.split(',') };
+    }
+
+    // Filter based on Rent
     if (data.rent) {
       let rentList = data.rent.split(',').map(Number);
       let rentFilterList = [];
       let rentFilterString = {};
       rentList.map(rent => {
         rentFilterString['rent'] = {
-          $lt: constants.RENT_FILTER_CONVENTIONS[rent]['less_than'],
+          $lte: constants.RENT_FILTER_CONVENTIONS[rent]['less_than'],
           $gte: constants.RENT_FILTER_CONVENTIONS[rent]['greater_than'],
         };
         rentFilterList.push(rentFilterString);
@@ -31,6 +38,8 @@ async function filterQuery(data) {
       });
       filterString['$or'] = rentFilterList;
     }
+
+    // Search based on Location
     if (data.search) {
       res = await Location.findOne({ name: data.search });
 
@@ -39,11 +48,10 @@ async function filterQuery(data) {
       }
     }
 
+    // Filter based on Ratings
     if (data.ratings) {
-      let ratingsList = data.ratings.split(',').map(Number);
-
       res = await Review.distinct('property', {
-        rating: { $in: ratingsList },
+        rating: { $in: data.ratings.split(',').map(Number) },
       });
       if (res) {
         filterString['_id'] = { $in: res };
@@ -56,6 +64,46 @@ async function filterQuery(data) {
   }
 }
 
+async function getReviewAnalysis(property_id) {
+  if (property_id) {
+    // Get reviews
+    reviews = await Review.find({
+      property: property_id,
+    }).populate('reviewedby', constants.POPULATE_USER_FIELDS);
+
+    // Find review analysis
+    if (reviews) {
+      totalDocument = reviews.length;
+      review_percentage = await Review.aggregate([
+        { $match: { property: ObjectId(property_id) } },
+        {
+          $group: {
+            _id: '$rating',
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $project: {
+            count: 1,
+            percentage: {
+              $trunc: [
+                { $multiply: [{ $divide: [100, totalDocument] }, '$count'] },
+                2,
+              ],
+            },
+          },
+        },
+      ]);
+    }
+    if (review_percentage) {
+      review_res = { reviews: reviews, reviewanalysis: review_percentage };
+      return review_res;
+    }
+  }
+}
+
 /**
  * Property List.
  *
@@ -65,65 +113,39 @@ exports.propertyList = [
   async function (req, res) {
     try {
       var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
 
-      await filterQuery(req.query).then(filterString => {
-        let sortFilter = {};
-        var query = '';
-        // Based on query string parameters format query
-        if (filterData.pagenumber && filterData.countperpage) {
-          if (filterData.columnname && filterData.orderby) {
-            sortFilter[filterData.columnname] = filterData.orderby;
-            query = Property.find(filterString)
-              .populate('location', constants.POPULATE_LOCATION_FIELDS)
-              .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-              .populate('owner', constants.POPULATE_USER_FIELDS)
-              .populate('numreviews')
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          } else {
-            query = Property.find(filterString)
-              .populate('location', constants.POPULATE_LOCATION_FIELDS)
-              .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-              .populate('owner', constants.POPULATE_USER_FIELDS)
-              .populate('numreviews')
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          }
-        } else if (filterData.columnname && filterData.orderby) {
-          sortFilter[filterData.columnname] = filterData.orderby;
-          query = Property.find(filterString)
-            .populate('location', constants.POPULATE_LOCATION_FIELDS)
-            .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-            .populate('owner', constants.POPULATE_USER_FIELDS)
-            .populate('numreviews')
-            .sort(sortFilter);
-        } else {
-          query = Property.find(filterString)
-            .populate('location', constants.POPULATE_LOCATION_FIELDS)
-            .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-            .populate('owner', constants.POPULATE_USER_FIELDS)
-            .populate('numreviews');
-        }
+      //Check if request from Owner
+      var user_id = req.route.path.includes('owner') ? req.params.id : '';
+
+      await setFilterQuery(req.query, user_id).then(filterString => {
+        queryParams = setParams.setSortSkipParams(filterData);
+        // Format query based on pagination and sorting parameters
+        var query = Property.find(filterString)
+          .populate('location', constants.POPULATE_LOCATION_FIELDS)
+          .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+          .populate('owner', constants.POPULATE_USER_FIELDS)
+          .populate('numreviews')
+          .sort(queryParams.sortFilter)
+          .skip(queryParams.skip)
+          .limit(parseInt(queryParams.limit));
 
         // Execute query and return response
         query.exec(function (err, properties) {
           if (err) throw new Error(err);
-          const response = properties.length
-            ? apiResponse.successResponseWithData(res, properties)
-            : apiResponse.successResponseWithData(res, []);
-          return response;
+
+          if (properties.length > 0) {
+            Property.find(filterString)
+              .countDocuments()
+              .then(count => {
+                return apiResponse.successResponseWithData(
+                  res,
+                  properties,
+                  count,
+                );
+              });
+          } else {
+            return apiResponse.successResponseWithData(res, []);
+          }
         });
       });
     } catch (err) {
@@ -141,23 +163,28 @@ exports.propertyList = [
  * @returns {Object}
  */
 exports.propertyDetail = [
-  function (req, res) {
+  async function (req, res) {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return apiResponse.validationErrorWithData(res, 'Invalid ID');
     }
     try {
-      Property.findOne({ _id: req.params.id })
-        .populate('location', constants.POPULATE_LOCATION_FIELDS)
-        .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
-        .populate('owner', constants.POPULATE_USER_FIELDS)
-        .populate('numreviews')
-        .then(property => {
-          const response =
-            property !== null
-              ? apiResponse.successResponseWithData(res, property)
-              : apiResponse.notFoundResponse(res);
-          return response;
-        });
+      await getReviewAnalysis(req.params.id).then(result => {
+        Property.findOne({ _id: req.params.id })
+          .populate('location', constants.POPULATE_LOCATION_FIELDS)
+          .populate('amenities', constants.POPULATE_AMENITY_FIELDS)
+          .populate('owner', constants.POPULATE_USER_FIELDS)
+          .populate('numreviews')
+          .then(property => {
+            if (property !== null) {
+              var final_response = {};
+              final_response['propertydata'] = property;
+              final_response['reviewdata'] = result;
+              return apiResponse.successResponseWithData(res, final_response);
+            } else {
+              apiResponse.successResponseWithData(res, []);
+            }
+          });
+      });
     } catch (err) {
       // Throw error in json response with status 500.
       return apiResponse.ErrorResponse(res, err);

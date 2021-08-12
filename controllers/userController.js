@@ -1,4 +1,5 @@
 const User = require('../models/userModel');
+const Property = require('../models/propertyModel');
 const { body, validationResult } = require('express-validator');
 const { sanitizeBody } = require('express-validator');
 const apiResponse = require('../helpers/apiResponse');
@@ -6,28 +7,33 @@ var mongoose = require('mongoose');
 mongoose.set('useFindAndModify', false);
 const jwt = require('jsonwebtoken');
 const constants = require('../constants');
+const setParams = require('../helpers/utility');
 
-async function filterQuery(data) {
+async function setFilterQuery(data, user_id) {
   try {
     var filterString = {};
-    if (data.type) {
-      if (data.type === 'tenant') {
-        filterString['property'] = { $exists: true };
+    if (user_id != '') {
+      res = await Property.find({ owner: user_id }, { _id: 1 });
+      if (res) {
+        filterString['property'] = { $in: res };
       }
     }
-    if (data.fromdate || data.todate) {
+
+    if (data.from_date || data.to_date) {
       var dateFilter = {};
-      if (data.fromdate) {
-        dateFilter['$gte'] = new Date(data.fromdate);
+      if (data.from_date) {
+        dateFilter['$gte'] = new Date(data.from_date);
       }
-      if (data.todate) {
-        dateFilter['$lte'] = new Date(data.todate);
+      if (data.to_date) {
+        dateFilter['$lte'] = new Date(data.to_date);
       }
-      filterString['onboardedAt'] = dateFilter;
+      type === 'owner'
+        ? (filterString['onboardedAt'] = dateFilter)
+        : (filterString['createdAt'] = dateFilter);
     }
 
     if (data.search) {
-      searchString = data.search.split(' ');
+      // searchString = data.search.split(' ');
       filterString['$expr'] = {
         $regexMatch: {
           input: { $concat: ['$firstName', ' ', '$lastName'] },
@@ -36,7 +42,6 @@ async function filterQuery(data) {
         },
       };
     }
-
     return filterString;
   } catch (err) {
     throw new Error('Error in query');
@@ -52,53 +57,30 @@ exports.userList = [
   async function (req, res) {
     try {
       var filterData = req.query;
-      if (filterData.orderby) {
-        if (filterData.orderby == 'dsc') {
-          filterData['orderby'] = -1;
-        } else {
-          filterData['orderby'] = 1;
-        }
-      }
+      //Check if request from Owner
+      var user_id = req.route.path.includes('owner') ? req.params.id : '';
 
-      await filterQuery(req.query).then(filterString => {
-        let sortFilter = {};
-        var query = '';
-        // Based on query string parameters format query
-        if (filterData.pagenumber && filterData.countperpage) {
-          if (filterData.columnname && filterData.orderby) {
-            sortFilter['onboardedAt'] = filterData.orderby;
-            query = User.find(filterString)
-              .populate('property', ['name'])
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          } else {
-            query = User.find(filterString)
-              .populate('property', ['name'])
-              .sort(sortFilter)
-              .skip(
-                (filterData.pagenumber - 1) * parseInt(filterData.countperpage),
-              )
-              .limit(parseInt(filterData.countperpage));
-          }
-        } else if (filterData.columnname && filterData.orderby) {
-          sortFilter['onboardedAt'] = filterData.orderby;
-          query = User.find(filterString)
-            .populate('property', ['name'])
-            .sort(sortFilter);
-        } else {
-          query = User.find(filterString).populate('property', ['name']);
-        }
+      await setFilterQuery(req.query, user_id).then(filterString => {
+        queryParams = setParams.setSortSkipParams(filterData);
+        // Format query based on pagination and sorting parameters
+        var query = Property.find(filterString)
+          .populate('property', constants.POPULATE_PROPERTY_FIELDS)
+          .sort(queryParams.sortFilter)
+          .skip(queryParams.skip)
+          .limit(parseInt(queryParams.limit));
 
         // Execute query and return response
-        query.exec(function (err, properties) {
+        query.exec(function (err, users) {
           if (err) throw new Error(err);
-          const response = properties.length
-            ? apiResponse.successResponseWithData(res, properties)
-            : apiResponse.successResponseWithData(res, []);
-          return response;
+          if (users.length > 0) {
+            User.find(filterString)
+              .countDocuments()
+              .then(count => {
+                return apiResponse.successResponseWithData(res, users, count);
+              });
+          } else {
+            return apiResponse.successResponseWithData(res, []);
+          }
         });
       });
     } catch (err) {
@@ -122,7 +104,7 @@ exports.userDetail = [
     }
     try {
       User.findOne({ _id: req.params.id })
-        .populate('property', ['name'])
+        .populate('property', constants.POPULATE_PROPERTY_FIELDS)
         .then(user => {
           const response =
             user !== null
@@ -287,6 +269,48 @@ exports.userDelete = [
             }
           },
         );
+      }
+    } catch (err) {
+      //throw error in json response with status 500.
+      return apiResponse.ErrorResponse(res, err);
+    }
+  },
+];
+
+/**
+ * User update.
+ *
+ * @param {string}      id
+ *
+ *
+ * @returns {Object}
+ */
+exports.userUpdate = [
+  sanitizeBody('*').escape(),
+  (req, res) => {
+    try {
+      const errors = validationResult(req);
+      var user = req.body;
+      if (!errors.isEmpty()) {
+        return apiResponse.validationErrorWithData(res, errors.array());
+      } else {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+          return apiResponse.validationErrorWithData(res);
+        } else {
+          User.findById(req.params.id, function (err, foundUser) {
+            if (foundUser === null) {
+              return apiResponse.notFoundResponse(res);
+            } else {
+              // Update user.
+              User.findByIdAndUpdate(req.params.id, user, function (err) {
+                const response = err
+                  ? apiResponse.ErrorResponse(res, err)
+                  : apiResponse.successResponseWithData(res, user);
+                return response;
+              });
+            }
+          });
+        }
       }
     } catch (err) {
       //throw error in json response with status 500.

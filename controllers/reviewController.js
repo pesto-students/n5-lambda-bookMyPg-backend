@@ -57,7 +57,7 @@ exports.reviewListByProperty = [
  *
  * @param {string}       rating
  * @param {string}       description
- *@param {ObjectId}      reviewedby
+ * @param {ObjectId}      reviewedby
  * @param {ObjectId}     property
 
  *

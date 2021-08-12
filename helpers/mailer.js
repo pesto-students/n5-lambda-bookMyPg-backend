@@ -14,15 +14,16 @@ const source = fs.readFileSync(filePath, 'utf-8').toString();
 const template = handlebars.compile(source);
 const constants = require('../constants');
 
-exports.send = function (email, emailReplacements) {
+exports.send = function (useremail, owneremail, emailReplacements) {
   const replacements = {
     notification_text: emailReplacements.notification_text,
   };
 
   const htmlToSend = template(replacements);
   return transporter.sendMail({
-    from: constants.SENDER_EMAIL,
-    to: email,
+    from: process.env.SENDER_EMAIL,
+    to: useremail,
+    cc: owneremail,
     subject: emailReplacements.subject,
     html: htmlToSend,
   });
