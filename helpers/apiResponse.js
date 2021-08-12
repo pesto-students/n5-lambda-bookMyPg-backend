@@ -11,7 +11,7 @@ exports.successResponseWithData = function (res, data, total_count) {
     status: 1,
     message: 'Operation Success',
     data: data,
-    total_Count: total_count,
+    total_count: total_count,
   };
   return res.status(200).json(resData);
 };
