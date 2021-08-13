@@ -1,5 +1,4 @@
 exports.visitTemplate = function (data) {
-	console.log(data);
 	let text = "";
 	var emailReplacements = {
 		subject: "Greetings! New Visit Scheduled",
