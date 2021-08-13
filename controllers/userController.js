@@ -42,6 +42,7 @@ async function setFilterQuery(data, user_id) {
         },
       };
     }
+    console.log(filterString);
     return filterString;
   } catch (err) {
     throw new Error('Error in query');
@@ -63,7 +64,7 @@ exports.userList = [
       await setFilterQuery(req.query, user_id).then(filterString => {
         queryParams = setParams.setSortSkipParams(filterData);
         // Format query based on pagination and sorting parameters
-        var query = Property.find(filterString)
+        var query = User.find(filterString)
           .populate('property', constants.POPULATE_PROPERTY_FIELDS)
           .sort(queryParams.sortFilter)
           .skip(queryParams.skip)

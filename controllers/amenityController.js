@@ -103,11 +103,6 @@ exports.amenityStore = [
     .isLength({ min: 1 })
     .trim()
     .withMessage('Name must be specified.')
-    .isAlphanumeric()
-    .withMessage('Name has non-alphanumeric characters.'),
-  body('logo')
-    .isLength({ min: 1 })
-    .withMessage('Logo must be specified.')
     .custom(value => {
       return Amenity.findOne({ name: value }).then(amenity => {
         if (amenity) {
@@ -115,6 +110,7 @@ exports.amenityStore = [
         }
       });
     }),
+  body('logo').isLength({ min: 1 }).withMessage('Logo must be specified.'),
   sanitizeBody('name').escape(),
   //sanitizeBody('logo').escape(),
   // Process request after validation and sanitization.
@@ -191,7 +187,6 @@ exports.amenityDelete = [
  * @returns {Object}
  */
 exports.amenityUpdate = [
-  sanitizeBody('*').escape(),
   (req, res) => {
     try {
       const errors = validationResult(req);

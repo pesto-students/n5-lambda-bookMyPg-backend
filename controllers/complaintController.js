@@ -46,7 +46,6 @@ async function setFilterQuery(data, user_id) {
         filterString['property'] = { $in: res };
       }
     }
-    console.log(filterString);
     return filterString;
   } catch (err) {
     throw new Error('Error in query');

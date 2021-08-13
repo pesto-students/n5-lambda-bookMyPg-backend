@@ -1,27 +1,27 @@
 const { chai, server, should } = require('./testConfig');
-const UserModel = require('../models/userModel');
+const AmenityModel = require('../models/amenityModel');
 const constants = require('./constants');
 
 /**
- * Test cases to test all the user APIs
+ * Test cases to test all the amenity APIs
  * Covered Routes:
  * (1) Get Token
- * (2) Store User
- * (3) Get all Users
- * (4) Get User by ID
- * (5) Update User
- * (6) Disable User
+ * (2) Store Amenity
+ * (3) Get all Amenities
+ * (4) Get Amenity by ID
+ * (5) Update Amenity
+ * (6) Disable Amenity
  */
 
-describe('User', () => {
+describe('Amenity', () => {
   const userTestData = {};
   const testData = constants.AMENITY_TEST_DATA;
 
   /*
-   * Test the /POST route
+   * Test the /GET Auth-token route
    */
-  describe('/GET Login', () => {
-    it('it should do user Login for User', done => {
+  describe('/GET Auth-token', () => {
+    it('it should do user Login for Amenity', done => {
       chai
         .request(server)
         .get('/api/users/user/' + process.env.TEST_CASE_EMAIL)
@@ -36,11 +36,11 @@ describe('User', () => {
   /*
    * Test the /POST route
    */
-  describe('/POST User Store', () => {
-    it('It should store user', done => {
+  describe('/POST Amenity Store', () => {
+    it('It should store amenity', done => {
       chai
         .request(server)
-        .post('/api/users')
+        .post('/api/amenities')
         .send(testData)
         .set('x-auth-token', userTestData.token)
         .end((err, res) => {
@@ -53,11 +53,11 @@ describe('User', () => {
   /*
    * Test the /GET route
    */
-  describe('/GET All users', () => {
-    it('it should GET all the users', done => {
+  describe('/GET All amenities', () => {
+    it('it should GET all the amenities', done => {
       chai
         .request(server)
-        .get('/api/users')
+        .get('/api/amenities')
         .set('x-auth-token', userTestData.token)
         .end((err, res) => {
           res.should.have.status(200);
@@ -71,11 +71,11 @@ describe('User', () => {
   /*
    * Test the /GET/:id route
    */
-  describe('/GET/:id user', () => {
-    it('it should GET the user', done => {
+  describe('/GET/:id amenity', () => {
+    it('it should GET the amenity', done => {
       chai
         .request(server)
-        .get('/api/users/' + testData._id)
+        .get('/api/amenities/' + testData._id)
         .set('x-auth-token', userTestData.token)
         .end((err, res) => {
           res.should.have.status(200);
@@ -87,11 +87,11 @@ describe('User', () => {
   /*
    * Test the /PUT/:id route
    */
-  describe('/PUT/:id user', () => {
-    it('it should PUT the users', done => {
+  describe('/PUT/:id amenity', () => {
+    it('it should PUT the amenities', done => {
       chai
         .request(server)
-        .put('/api/users/' + testData._id)
+        .put('/api/amenities/' + testData._id)
         .send(testData)
         .set('x-auth-token', userTestData.token)
         .end((err, res) => {
@@ -105,11 +105,11 @@ describe('User', () => {
   /*
    * Test the /DELETE/:id route
    */
-  describe('/DELETE/:id user', () => {
-    it('it should DELETE the users', done => {
+  describe('/DELETE/:id amenity', () => {
+    it('it should DELETE the amenities', done => {
       chai
         .request(server)
-        .delete('/api/users/' + testData._id)
+        .delete('/api/amenities/' + testData._id)
         .set('x-auth-token', userTestData.token)
         .end((err, res) => {
           res.should.have.status(200);
