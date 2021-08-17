@@ -6,7 +6,6 @@ var ComplaintSchema = new mongoose.Schema(
 		description: { type: String, required: true },
 		raisedby: { type: mongoose.Types.ObjectId, ref: "user" },
 		property: { type: mongoose.Types.ObjectId, ref: "property" },
-		isactive: { type: Boolean, required: true, default: 1 },
 	},
 	{ timestamps: true },
 );

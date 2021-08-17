@@ -138,10 +138,18 @@ exports.userDetailbyEmail = [
 		}
 		try {
 			User.findOne({ email: req.params.email })
-				.populate("property", ["name"])
+				.populate("property", constants.POPULATE_PROPERTY_FIELDS)
 				.then(user => {
-					const { _id, firstName, lastName, email, phone, role, isactive } =
-            user;
+					const {
+						_id,
+						firstName,
+						lastName,
+						email,
+						phone,
+						role,
+						isactive,
+						property,
+					} = user;
 					if (user !== null) {
 						// Generate token
 						const token = jwt.sign(
@@ -156,6 +164,7 @@ exports.userDetailbyEmail = [
 							phone,
 							role,
 							isactive,
+							property,
 							token,
 						};
 						return apiResponse.successResponseWithData(res, userData);
