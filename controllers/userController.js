@@ -219,13 +219,16 @@ exports.userStore = [
 				// Display sanitized values/errors messages.
 				return apiResponse.validationErrorWithData(res, errors.array());
 			} else {
-				const { firstName, lastName, email, phone } = req.body;
+				const { firstName, lastName, email, role, phone, onboardedAt } =
+          req.body;
 				// Create User object with escaped and trimmed data
 				var user = new User({
 					firstName,
 					lastName,
 					email,
 					phone,
+					role,
+					onboardedAt,
 				});
 
 				// Save user.
