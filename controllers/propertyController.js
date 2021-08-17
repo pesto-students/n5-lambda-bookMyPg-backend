@@ -15,7 +15,7 @@ async function setFilterQuery(data, user_id) {
 		let res = "";
 
 		if (user_id != "") {
-			filterString["owner"] = user_id;
+			filterString["owner"] = ObjectId(user_id);
 		} else {
 			filterString["isactive"] = true;
 		}
@@ -134,16 +134,28 @@ exports.propertyList = [
 					.limit(parseInt(queryParams.limit));
 
 				// Execute query and return response
-				query.exec(function (err, properties) {
+				query.exec(async function (err, properties) {
 					if (err) throw new Error(err);
 
 					if (properties.length > 0) {
+						var properties_response = [];
+						await Promise.all(
+							properties.map(async property => {
+								await getReviewAnalysis(property._id).then(result => {
+									var final_response = {};
+									final_response["propertydata"] = property;
+									final_response["reviewdata"] = result;
+									properties_response.push(final_response);
+								});
+							}),
+						);
+
 						Property.find(filterString)
 							.countDocuments()
 							.then(count => {
 								return apiResponse.successResponseWithData(
 									res,
-									properties,
+									properties_response,
 									count,
 								);
 							});
