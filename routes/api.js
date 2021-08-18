@@ -7,8 +7,6 @@ var reviewRouter = require('./review');
 var complaintRouter = require('./complaint');
 var paymentRouter = require('./payment');
 var emailRouter = require('./email');
-var complaintschartRouter = require('./complaintschart');
-var occupancychartRouter = require('./occupancychart.');
 var app = express();
 
 app.use('/users/', userRouter);
@@ -19,6 +17,6 @@ app.use('/reviews/', reviewRouter);
 app.use('/complaints/', complaintRouter);
 app.use('/payments/', paymentRouter);
 app.use('/emails/', emailRouter);
-app.use('/complaintschart', complaintschartRouter);
+
 
 module.exports = app;
