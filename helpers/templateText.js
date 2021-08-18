@@ -90,3 +90,26 @@ exports.queryTemplate = function (data) {
 	};
 	return emailReplacements;
 };
+
+exports.paymentTemplate = function (data) {
+	let text = "";
+	var emailReplacements = {
+		subject: "Greetings! New Payment Received",
+		notification_text: text.concat(
+			"New Payment of Rs.",
+			data.amount,
+			" is received from <i>",
+			data.name,
+			"</i>, for property <i><a href=",
+			`${process.env.S3_DEPLOYMENT_LINK_DEV}`,
+			" style=\"color: #ffffff\">",
+			data.property_name,
+			"</a></i> on <i>",
+			data.date,
+			"</i>.<br />Please visit your <i><a href=",
+			`${process.env.S3_DEPLOYMENT_LINK_DEV}`,
+			" style=\"color: #ffffff\">BookMyPG</a></i> account for more details",
+		),
+	};
+	return emailReplacements;
+};

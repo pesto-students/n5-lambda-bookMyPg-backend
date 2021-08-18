@@ -68,44 +68,70 @@ async function setFilterQuery(data, user_id) {
 
 async function getReviewAnalysis(property_id) {
 	var review_res = {};
-	let review_percentage = [];
 	let reviews = [];
 	if (property_id) {
-		// Get reviews
 		reviews = await Review.find({
 			property: property_id,
 		}).populate("reviewedby", constants.POPULATE_USER_FIELDS);
 		// Find review analysis
 		if (reviews.length > 0) {
 			var totalDocument = reviews.length;
-			review_percentage = await Review.aggregate([
-				{ $match: { property: ObjectId(property_id) } },
+			var review_analysis = await Review.aggregate([
 				{
-					$group: {
-						_id: "$rating",
-						count: {
-							$sum: 1,
-						},
-					},
-				},
-				{
-					$project: {
-						count: 1,
-						percentage: {
-							$trunc: [
-								{ $multiply: [{ $divide: [100, totalDocument] }, "$count"] },
-								2,
-							],
-						},
+					$facet: {
+						review_percentage: [
+							{ $match: { property: ObjectId(property_id) } },
+							{
+								$group: {
+									_id: "$rating",
+									count: {
+										$sum: 1,
+									},
+								},
+							},
+							{
+								$project: {
+									count: 1,
+									percentage: {
+										$trunc: [
+											{
+												$multiply: [
+													{ $divide: [100, totalDocument] },
+													"$count",
+												],
+											},
+											2,
+										],
+									},
+								},
+							},
+						],
+						avg_ratings: [
+							{
+								$match: { property: property_id },
+							},
+							{
+								$group: {
+									_id: null,
+									avgratings: { $avg: { $ifNull: ["$rating", 0] } },
+								},
+							},
+							{ $project: { avgratings: { $trunc: ["$avgratings", 2] } } },
+						],
 					},
 				},
 			]);
+
+			if (review_analysis) {
+				review_res = {
+					reviews: reviews,
+					reviewanalysis: review_analysis[0].review_percentage,
+					avgratings: review_analysis[0].avg_ratings[0].avgratings,
+				};
+			}
 		}
-		if (review_percentage) {
-			review_res = { reviews: reviews, reviewanalysis: review_percentage };
-		}
+		return review_res;
 	}
-	return review_res;
 }
 
 /**
@@ -118,7 +144,7 @@ exports.propertyList = [
 		try {
 			var filterData = req.query;
 
-			//Check if request from Owner
+			// Check if request from Owner
 			var user_id = req.route.path.includes("owner") ? req.params.id : "";
 
 			await setFilterQuery(req.query, user_id).then(filterString => {

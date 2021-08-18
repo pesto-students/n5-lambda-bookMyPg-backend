@@ -5,6 +5,8 @@ const setParams = require("../helpers/utility");
 const constants = require("../constants");
 const { body, validationResult } = require("express-validator");
 const { sanitizeBody } = require("express-validator");
+const templateText = require("../helpers/templateText");
+const mailer = require("../helpers/mailer");
 
 async function setFilterQuery(data, user_id) {
 	try {
@@ -95,10 +97,18 @@ exports.paymentStore = [
 
 				// Save payment.
 				payment.save(function (err) {
-					const response = err
+					/*const response = err
 						? apiResponse.ErrorResponse(res, err)
-						: apiResponse.successResponseWithData(res, payment);
-					return response;
+						: apiResponse.successResponseWithData(res, payment);*/
+					if (err) {
+						return apiResponse.ErrorResponse(res, err);
+					}
+					var emailReplacements = templateText.paymentTemplate(req.body);
+					mailer
+						.send(payment.email, req.body.owneremail, emailReplacements)
+						.then(function () {
+							return apiResponse.successResponseWithData(res, payment);
+						});
 				});
 			}
 		} catch (err) {

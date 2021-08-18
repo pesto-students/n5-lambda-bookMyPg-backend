@@ -13,8 +13,11 @@ var PropertySchema = new mongoose.Schema(
 		owner: { type: mongoose.Types.ObjectId, ref: "user" },
 		isactive: { type: Boolean, required: true, default: 1 },
 	},
-	{ timestamps: true },
-	{ toJSON: { virtuals: true }, toObject: { virtuals: true } },
+	{
+		timestamps: true,
+		toJSON: { virtuals: true },
+		toObject: { virtuals: true },
+	},
 );
 
 PropertySchema.virtual("numreviews", {
