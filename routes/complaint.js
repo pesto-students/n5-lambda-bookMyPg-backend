@@ -5,6 +5,7 @@ const role = require('../helpers/roles');
 
 var router = express.Router();
 
+router.get('/', complaintController.complaintList);
 router.get('/owner/:id', complaintController.complaintList);
 router.get(
   '/:id',

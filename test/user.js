@@ -1,45 +1,37 @@
-const { chai, server } = require('./testconfig');
-const userModel = require('../models/userModel');
-const { testData } = require('../constants');
+const { chai, server, should } = require('./testConfig');
+const constants = require('./constants');
+
 /**
- * Test cases to test all the book APIs
+ * Test cases to test all the user APIs
  * Covered Routes:
- * (1) Login
- * (2) Store user
- * (3) Get all users
- * (4) Get single user
+ * (1) Get Token
+ * (2) Store User
+ * (3) Get all Users
+ * (4) Get User by ID
+ * (5) Update User
+ * (6) Disable User
  */
 
 describe('User', () => {
-  //Before each test we empty the database
-  before(done => {
-    userModel.deleteMany({}, () => {
-      done();
-    });
-  });
-
-  // Prepare data for testing
-  const userTestData = {
-    token: '',
-  };
+  const userTestData = {};
+  const testData = constants.AMENITY_TEST_DATA;
 
   /*
    * Test the /POST route
    */
-  describe('/POST User Store', () => {
-    it('It should send validation error for store user', done => {
+  describe('/GET Login', () => {
+    it('it should do user Login for User', done => {
       chai
         .request(server)
-        .post('/api/user')
-        .send()
-        //.set("Authorization", "Bearer "+ userTestData.token)
+        .get('/api/users/user/' + process.env.TEST_CASE_EMAIL)
         .end((err, res) => {
-          res.should.have.status(400);
+          res.should.have.status(200);
+          res.body.should.have.property('message').eql('Operation Success');
+          userTestData.token = res.body.data.token;
           done();
         });
     });
   });
-
   /*
    * Test the /POST route
    */
@@ -47,18 +39,16 @@ describe('User', () => {
     it('It should store user', done => {
       chai
         .request(server)
-        .post('/api/user')
+        .post('/api/users')
         .send(testData)
-        //.set("Authorization", "Bearer "+ userTestData.token)
+        .set('x-auth-token', userTestData.token)
         .end((err, res) => {
           res.should.have.status(200);
-          res.body.should.have.property('message').eql('User add Success.');
-          userTestData.token = res.body.data.token;
+          res.body.should.have.property('message').eql('Operation Success');
           done();
         });
     });
   });
-
   /*
    * Test the /GET route
    */
@@ -66,14 +56,11 @@ describe('User', () => {
     it('it should GET all the users', done => {
       chai
         .request(server)
-        .get('/api/user')
+        .get('/api/users')
         .set('x-auth-token', userTestData.token)
         .end((err, res) => {
-          if (err) {
-            console.log(err);
-          }
           res.should.have.status(200);
-          res.body.should.have.property('message').eql('Operation success');
+          res.body.should.have.property('message').eql('Operation Success');
           testData._id = res.body.data[0]._id;
           done();
         });
@@ -84,14 +71,48 @@ describe('User', () => {
    * Test the /GET/:id route
    */
   describe('/GET/:id user', () => {
-    it('it should GET the users', done => {
+    it('it should GET the user', done => {
       chai
         .request(server)
-        .get('/api/user/' + testData._id)
+        .get('/api/users/' + testData._id)
         .set('x-auth-token', userTestData.token)
         .end((err, res) => {
           res.should.have.status(200);
-          res.body.should.have.property('message').eql('Operation success');
+          res.body.should.have.property('message').eql('Operation Success');
+          done();
+        });
+    });
+  });
+  /*
+   * Test the /PUT/:id route
+   */
+  describe('/PUT/:id user', () => {
+    it('it should PUT the users', done => {
+      chai
+        .request(server)
+        .put('/api/users/' + testData._id)
+        .send(testData)
+        .set('x-auth-token', userTestData.token)
+        .end((err, res) => {
+          res.should.have.status(200);
+          res.body.should.have.property('message').eql('Operation Success');
+          done();
+        });
+    });
+  });
+
+  /*
+   * Test the /DELETE/:id route
+   */
+  describe('/DELETE/:id user', () => {
+    it('it should DELETE the users', done => {
+      chai
+        .request(server)
+        .delete('/api/users/' + testData._id)
+        .set('x-auth-token', userTestData.token)
+        .end((err, res) => {
+          res.should.have.status(200);
+          res.body.should.have.property('message').eql('Operation Success');
           done();
         });
     });

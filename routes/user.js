@@ -1,21 +1,14 @@
-var express = require('express');
-const userController = require('../controllers/userController');
-const auth = require('../middlewares/auth');
-const role = require('../helpers/roles');
+var express = require("express");
+const userController = require("../controllers/userController");
 
 var router = express.Router();
 
-router.get('/', userController.userList);
-router.get('/:id', userController.userDetail);
-router.get('/user/:email', userController.userDetailbyEmail);
-router.get('/owner/:id', userController.userList);
-router.post('/', userController.userStore);
-router.delete(
-  '/:id',
-  auth.protect,
-  auth.restrictTo(role.Owner),
-  userController.userDelete,
-);
-router.put('/:id', userController.userUpdate);
+router.get("/", userController.userList);
+router.get("/:id", userController.userDetail);
+router.get("/user/:email", userController.userDetailbyEmail);
+router.get("/owner/:id", userController.userList);
+router.post("/", userController.userStore);
+router.delete("/:id", userController.userDelete);
+router.put("/:id", userController.userUpdate);
 
 module.exports = router;
