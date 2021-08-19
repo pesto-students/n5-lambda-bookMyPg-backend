@@ -1,0 +1,51 @@
+module.exports = {
+	AMENITY_TEST_DATA: {
+		name: "Washing Machine",
+		logo: "https://bookmypg-photos.s3.us-east-2.amazonaws.com/amenity-logos/washing-machine-31.png",
+	},
+	COMPLAINT_TEST_DATA: {
+		email: "monalidoshi9@gmail.com",
+		description: "Food issue",
+		raisedby: "61164e9b2d1eb95928dfcf61",
+		property: "6107f71173adbf267c6b5565",
+		owner: "61164e9b2d1eb95928dfcf61",
+	},
+	PROPERTY_TEST_DATA: {
+		name: "Zolo House 13",
+		location: "610541037eefd34258a430d4",
+		address: "Navi Mumbai",
+		description: "3bhk luxurious",
+		rent: 24000,
+		totalbeds: 10,
+		amenities: ["61165f65dbd711146c3d34f2"],
+		owner: "61164e9b2d1eb95928dfcf61",
+		photos: ["S3 key1", "S3 key2"],
+		gender: "Male",
+	},
+	LOCATION_TEST_DATA: {
+		name: "Bengluru",
+	},
+	EMAIL_TEST_DATA: {
+		useremail: "monalidoshi9@gmail.com",
+		owneremail: "monalidoshi9+owner@gmail.com",
+		type: "Visit",
+		propertyname: "Zolo House 1",
+		date: "12/07/2021",
+		fromtime: "10:00am",
+		totime: "06:00pm",
+		property: "6107f71173adbf267c6b5565",
+	},
+	PAYMENT_TEST_DATA: {
+		charge_id: "ch_1234",
+		email: "hello170@gmail.com",
+		amount: "14000",
+		raisedby: "61164e9b2d1eb95928dfcf61",
+		property: "6107f71173adbf267c6b5565",
+	},
+	REVIEW_TEST_DATA: {
+		rating: 5,
+		description: "Awesome Property",
+		reviewedby: "61164e9b2d1eb95928dfcf61",
+		property: "6107f71173adbf267c6b5565",
+	},
+};
