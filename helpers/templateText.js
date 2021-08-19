@@ -101,7 +101,7 @@ exports.paymentTemplate = function (data) {
 			" is received from <i>",
 			data.name,
 			"</i>, for property <i><a href=",
-			`${process.env.S3_DEPLOYMENT_LINK_DEV}`,
+			`${process.env.S3_DEPLOYMENT_LINK_DEV}property-details/${data.property_id}`,
 			" style=\"color: #ffffff\">",
 			data.property_name,
 			"</a></i> on <i>",

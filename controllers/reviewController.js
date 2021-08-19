@@ -35,9 +35,7 @@ exports.reviewList = [
  */
 exports.reviewListByProperty = [
 	function (req, res) {
-		console.log("here");
 		try {
-			console.log(req.params.id);
 			Review.find({ property: req.params.id })
 				.populate("property", constants.POPULATE_PROPERTY_FIELDS)
 				.populate("reviewedby", constants.POPULATE_USER_FIELDS)

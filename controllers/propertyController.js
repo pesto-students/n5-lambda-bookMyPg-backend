@@ -59,7 +59,6 @@ async function setFilterQuery(data, user_id) {
 				filterString["_id"] = { $in: res };
 			}
 		}
-
 		return filterString;
 	} catch (err) {
 		throw new Error("Error in query");
