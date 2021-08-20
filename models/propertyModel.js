@@ -11,6 +11,7 @@ var PropertySchema = new mongoose.Schema(
 		photos: { type: Array, required: true },
 		amenities: { type: Array, ref: "amenity" },
 		owner: { type: mongoose.Types.ObjectId, ref: "user" },
+		gender: { type: String, required: true },
 		isactive: { type: Boolean, required: true, default: 1 },
 	},
 	{
