@@ -44,6 +44,7 @@ describe("Review", () => {
 				.end((err, res) => {
 					res.should.have.status(200);
 					res.body.should.have.property("message").eql("Operation Success");
+					testData._id = res.body.data._id;
 					done();
 				});
 		});
@@ -60,7 +61,6 @@ describe("Review", () => {
 				.end((err, res) => {
 					res.should.have.status(200);
 					res.body.should.have.property("message").eql("Operation Success");
-					testData._id = res.body.data[0]._id;
 					done();
 				});
 		});
