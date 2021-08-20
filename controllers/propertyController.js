@@ -277,6 +277,7 @@ exports.propertyStore = [
 					amenities,
 					owner,
 					photos,
+					gender,
 				} = req.body;
 				// Create Property object with escaped and trimmed data
 				var property = new Property({
@@ -289,6 +290,7 @@ exports.propertyStore = [
 					amenities,
 					owner,
 					photos,
+					gender,
 				});
 
 				// Save property.
