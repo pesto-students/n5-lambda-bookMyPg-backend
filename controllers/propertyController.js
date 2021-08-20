@@ -41,12 +41,18 @@ async function setFilterQuery(data, user_id) {
 			filterString["$or"] = rentFilterList;
 		}
 
+		if (user_id != "") {
+			if (data.search) {
+				filterString["name"] = data.search;
+			}
+		}
+
 		// Search based on Location
-		if (data.search) {
+		else if (data.search) {
 			res = await Location.findOne({ name: data.search });
 
 			if (res) {
-				filterString["location"] = res._id;
+				filterString["name"] = res._id;
 			}
 		}
 
