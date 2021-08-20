@@ -43,7 +43,10 @@ async function setFilterQuery(data, user_id) {
 
 		if (user_id != "") {
 			if (data.search) {
-				filterString["name"] = data.search;
+				filterString["name"] = {
+					$regex: ".*" + data.search + ".*",
+					$options: "i",
+				};
 			}
 		}
 
