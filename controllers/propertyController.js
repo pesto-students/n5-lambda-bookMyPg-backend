@@ -61,9 +61,6 @@ async function setFilterQuery(data, user_id) {
 
 		// Filter based on Ratings
 		if (data.rating) {
-			/* res = await Review.distinct('property', {
-        rating: { $in: data.ratings.split(',').map(Number) },
-      });*/
 			res = await Review.aggregate([
 				{
 					$group: {
@@ -74,11 +71,9 @@ async function setFilterQuery(data, user_id) {
 				{ $match: { avgRating: { $in: data.rating.split(",").map(Number) } } },
 			]);
 			if (res) {
-				console.log(res);
 				filterString["_id"] = { $in: res };
 			}
 		}
-		console.log(filterString);
 		return filterString;
 	} catch (err) {
 		throw new Error("Error in query");
