@@ -55,7 +55,7 @@ async function setFilterQuery(data, user_id) {
 			res = await Location.findOne({ name: data.search });
 
 			if (res) {
-				filterString["name"] = res._id;
+				filterString["location"] = res._id;
 			}
 		}
 
