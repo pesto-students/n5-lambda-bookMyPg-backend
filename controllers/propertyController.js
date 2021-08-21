@@ -43,7 +43,10 @@ async function setFilterQuery(data, user_id) {
 
 		if (user_id != "") {
 			if (data.search) {
-				filterString["name"] = data.search;
+				filterString["name"] = {
+					$regex: ".*" + data.search + ".*",
+					$options: "i",
+				};
 			}
 		}
 
@@ -52,7 +55,7 @@ async function setFilterQuery(data, user_id) {
 			res = await Location.findOne({ name: data.search });
 
 			if (res) {
-				filterString["name"] = res._id;
+				filterString["location"] = res._id;
 			}
 		}
 
