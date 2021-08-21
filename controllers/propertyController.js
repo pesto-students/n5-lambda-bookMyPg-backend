@@ -43,7 +43,10 @@ async function setFilterQuery(data, user_id) {
 
 		if (user_id != "") {
 			if (data.search) {
-				filterString["name"] = data.search;
+				filterString["name"] = {
+					$regex: ".*" + data.search + ".*",
+					$options: "i",
+				};
 			}
 		}
 
@@ -52,15 +55,21 @@ async function setFilterQuery(data, user_id) {
 			res = await Location.findOne({ name: data.search });
 
 			if (res) {
-				filterString["name"] = res._id;
+				filterString["location"] = res._id;
 			}
 		}
 
 		// Filter based on Ratings
-		if (data.ratings) {
-			res = await Review.distinct("property", {
-				rating: { $in: data.ratings.split(",").map(Number) },
-			});
+		if (data.rating) {
+			res = await Review.aggregate([
+				{
+					$group: {
+						_id: "$property",
+						avgRating: { $avg: "$rating" },
+					},
+				},
+				{ $match: { avgRating: { $in: data.rating.split(",").map(Number) } } },
+			]);
 			if (res) {
 				filterString["_id"] = { $in: res };
 			}
