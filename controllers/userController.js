@@ -31,7 +31,7 @@ async function setFilterQuery(data, user_id) {
 			if (data.to_date) {
 				dateFilter["$lte"] = new Date(data.to_date);
 			}
-			data.type === "owner"
+			user_id != ""
 				? (filterString["onboardedAt"] = dateFilter)
 				: (filterString["createdAt"] = dateFilter);
 		}
