@@ -149,6 +149,7 @@ exports.userDetailbyEmail = [
 						role,
 						isactive,
 						property,
+						image,
 					} = user;
 					if (user !== null) {
 						// Generate token
@@ -166,6 +167,7 @@ exports.userDetailbyEmail = [
 							isactive,
 							property,
 							token,
+							image,
 						};
 						return apiResponse.successResponseWithData(res, userData);
 					} else {
@@ -228,7 +230,7 @@ exports.userStore = [
 				// Display sanitized values/errors messages.
 				return apiResponse.validationErrorWithData(res, errors.array());
 			} else {
-				const { firstName, lastName, email, role, phone, onboardedAt } =
+				const { firstName, lastName, email, role, phone, onboardedAt, image } =
           req.body;
 				// Create User object with escaped and trimmed data
 				var user = new User({
@@ -237,6 +239,7 @@ exports.userStore = [
 					email,
 					phone,
 					role,
+					image,
 					onboardedAt,
 				});
 
@@ -303,7 +306,7 @@ exports.userDelete = [
  * @returns {Object}
  */
 exports.userUpdate = [
-	sanitizeBody("*").escape(),
+	// sanitizeBody("*").escape(),
 	(req, res) => {
 		try {
 			const errors = validationResult(req);
