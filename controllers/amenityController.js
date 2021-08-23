@@ -154,7 +154,6 @@ exports.amenityStore = [
 exports.amenityDelete = [
 	(req, res) => {
 		try {
-			var amenity = { isactive: false };
 			if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
 				return apiResponse.validationErrorWithData(res, "Invalid ID");
 			} else {
@@ -163,6 +162,7 @@ exports.amenityDelete = [
 						return apiResponse.notFoundResponse(res);
 					} else {
 						// Disable user.
+						var amenity = { isactive: !foundAmenity.isactive };
 						Amenity.findByIdAndUpdate(req.params.id, amenity, function (err) {
 							const response = err
 								? apiResponse.ErrorResponse(res, err)
