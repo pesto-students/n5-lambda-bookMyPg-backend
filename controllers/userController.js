@@ -269,7 +269,6 @@ exports.userStore = [
 exports.userDelete = [
 	(req, res) => {
 		try {
-			var user = { isactive: false };
 			if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
 				return apiResponse.validationErrorWithData(res, "Invalid ID");
 			} else {
@@ -280,6 +279,7 @@ exports.userDelete = [
 							return apiResponse.notFoundResponse(res);
 						} else {
 							// Disable user.
+							var user = { isactive: !foundUser.isactive };
 							User.findByIdAndUpdate(req.params.id, user, function (err) {
 								const response = err
 									? apiResponse.ErrorResponse(res, err)

@@ -336,7 +336,6 @@ exports.propertyStore = [
 exports.propertyDelete = [
 	(req, res) => {
 		try {
-			var property = { isactive: false };
 			if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
 				return apiResponse.validationErrorWithData(res, "Invalid ID");
 			} else {
@@ -345,6 +344,7 @@ exports.propertyDelete = [
 						return apiResponse.notFoundResponse(res);
 					} else {
 						// Disable property.
+						var property = { isactive: !foundProperty.isactive };
 						Property.findByIdAndUpdate(req.params.id, property, function (err) {
 							const response = err
 								? apiResponse.ErrorResponse(res, err)
