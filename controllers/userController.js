@@ -272,23 +272,20 @@ exports.userDelete = [
 			if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
 				return apiResponse.validationErrorWithData(res, "Invalid ID");
 			} else {
-				User.findOne(
-					{ _id: req.params.id, isactive: true },
-					function (err, foundUser) {
-						if (foundUser === null) {
-							return apiResponse.notFoundResponse(res);
-						} else {
-							// Disable user.
-							var user = { isactive: !foundUser.isactive };
-							User.findByIdAndUpdate(req.params.id, user, function (err) {
-								const response = err
-									? apiResponse.ErrorResponse(res, err)
-									: apiResponse.successResponseWithData(res, user);
-								return response;
-							});
-						}
-					},
-				);
+				User.findOne({ _id: req.params.id }, function (err, foundUser) {
+					if (foundUser === null) {
+						return apiResponse.notFoundResponse(res);
+					} else {
+						// Disable user.
+						var user = { isactive: !foundUser.isactive };
+						User.findByIdAndUpdate(req.params.id, user, function (err) {
+							const response = err
+								? apiResponse.ErrorResponse(res, err)
+								: apiResponse.successResponseWithData(res, user);
+							return response;
+						});
+					}
+				});
 			}
 		} catch (err) {
 			//throw error in json response with status 500.
